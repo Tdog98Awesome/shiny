@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GetPickUpPulse Admin</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #d1d5db;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --success: #15803d;
+      --error: #b91c1c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .wrap {
+      max-width: 720px;
+      margin: 40px auto;
+      padding: 16px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+      margin-bottom: 20px;
+    }
+
+    h1, h2 {
+      margin-top: 0;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 16px;
+      font-size: 16px;
+    }
+
+    button {
+      background: var(--primary);
+      color: white;
+      border: 0;
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: var(--primary-hover);
+    }
+
+    button.secondary {
+      background: #374151;
+    }
+
+    button.secondary:hover {
+      background: #1f2937;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .status {
+      margin-top: 14px;
+      padding: 12px;
+      border-radius: 10px;
+      background: #eef2ff;
+      border: 1px solid #c7d2fe;
+    }
+
+    .success {
+      color: var(--success);
+    }
+
+    .error {
+      color: var(--error);
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    a.download-link {
+      color: var(--primary);
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    a.download-link:hover {
+      text-decoration: underline;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #e5e7eb;
+      font-size: 14px;
+      margin-right: 8px;
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>PickUpPulse Admin</h1>
+      <p class="muted">Log in to generate family pickup cards from your live student database.</p>
+    </div>
+
+    <div class="card" id="loginCard">
+      <h2>Login</h2>
+      <label for="email">Email</label>
+      <input id="email" type="email" placeholder="you@example.com" />
+
+      <label for="password">Password</label>
+      <input id="password" type="password" placeholder="Password" />
+
+      <div class="row">
+        <button id="loginBtn">Log In</button>
+      </div>
+
+      <div id="loginStatus" class="status hidden"></div>
+    </div>
+
+    <div class="card hidden" id="appCard">
+      <h2>Admin Dashboard</h2>
+
+      <div id="sessionInfo" class="muted"></div>
+      <div style="margin-top: 12px;">
+        <span class="pill" id="rolePill">Role: -</span>
+        <span class="pill" id="schoolPill">School: -</span>
+      </div>
+
+      <div style="margin-top: 20px;" class="row">
+        <button id="generateBtn">Generate Family Cards PDF</button>
+        <button id="logoutBtn" class="secondary">Log Out</button>
+      </div>
+
+      <div id="generateStatus" class="status hidden"></div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://pthjwhhaupyswopadmsv.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0aGp3aGhhdXB5c3dvcGFkbXN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjgzMTcsImV4cCI6MjA5MTQ0NDMxN30.oSFyNIf3pr9_Nbc8vG4pr9OGU7ufUJgEpW6eQNCwtYs";
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const loginCard = document.getElementById("loginCard");
+    const appCard = document.getElementById("appCard");
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const generateBtn = document.getElementById("generateBtn");
+
+    const loginStatus = document.getElementById("loginStatus");
+    const generateStatus = document.getElementById("generateStatus");
+    const sessionInfo = document.getElementById("sessionInfo");
+    const rolePill = document.getElementById("rolePill");
+    const schoolPill = document.getElementById("schoolPill");
+
+    function showStatus(el, message, isError = false) {
+      el.classList.remove("hidden");
+      el.innerHTML = `<span class="${isError ? "error" : "success"}">${message}</span>`;
+    }
+
+    function hideStatus(el) {
+      el.classList.add("hidden");
+      el.innerHTML = "";
+    }
+
+    async function loadProfile(user) {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("role, school_id, schools(name)")
+        .eq("id", user.id)
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return data;
+    }
+
+    async function updateUIForSession() {
+      hideStatus(loginStatus);
+      hideStatus(generateStatus);
+
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        loginCard.classList.remove("hidden");
+        appCard.classList.add("hidden");
+        return;
+      }
+
+      loginCard.classList.add("hidden");
+      appCard.classList.remove("hidden");
+
+      const user = session.user;
+      sessionInfo.textContent = `Logged in as ${user.email}`;
+
+      try {
+        const profile = await loadProfile(user);
+        rolePill.textContent = `Role: ${profile.role || "-"}`;
+        schoolPill.textContent = `School: ${profile.schools?.name || profile.school_id || "-"}`;
+      } catch (err) {
+        rolePill.textContent = "Role: ?";
+        schoolPill.textContent = "School: ?";
+        showStatus(generateStatus, `Could not load profile: ${err.message}`, true);
+      }
+    }
+
+    async function login() {
+      hideStatus(loginStatus);
+
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      if (!email || !password) {
+        showStatus(loginStatus, "Enter both email and password.", true);
+        return;
+      }
+
+      loginBtn.disabled = true;
+
+      try {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+
+        if (error) throw error;
+
+        showStatus(loginStatus, "Login successful.");
+        await updateUIForSession();
+      } catch (err) {
+        showStatus(loginStatus, err.message, true);
+      } finally {
+        loginBtn.disabled = false;
+      }
+    }
+
+    async function logout() {
+      generateBtn.disabled = true;
+      logoutBtn.disabled = true;
+
+      try {
+        await supabase.auth.signOut();
+        await updateUIForSession();
+      } finally {
+        generateBtn.disabled = false;
+        logoutBtn.disabled = false;
+      }
+    }
+
+    async function generatePdf() {
+      hideStatus(generateStatus);
+      generateBtn.disabled = true;
+
+      try {
+        showStatus(generateStatus, "Generating PDF...");
+
+        const { data, error } = await supabase.functions.invoke("generate-family-cards", {
+          body: {
+            // Add logo_url here later if you want:
+            // logo_url: "https://YOUR_PROJECT.supabase.co/storage/v1/object/public/branding/school_logo.png"
+          }
+        });
+
+        if (error) throw error;
+        if (!data || !data.download_url) {
+          throw new Error("No download URL returned.");
+        }
+
+        showStatus(
+          generateStatus,
+          `PDF ready. <a class="download-link" href="${data.download_url}" target="_blank" rel="noopener">Download Family Cards PDF</a>`
+        );
+      } catch (err) {
+        showStatus(generateStatus, err.message, true);
+      } finally {
+        generateBtn.disabled = false;
+      }
+    }
+
+    loginBtn.addEventListener("click", login);
+    logoutBtn.addEventListener("click", logout);
+    generateBtn.addEventListener("click", generatePdf);
+
+    supabase.auth.onAuthStateChange(async () => {
+      await updateUIForSession();
+    });
+
+    updateUIForSession();
+  </script>
+</body>
+</html>
