@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PickupPulse Superadmin Dashboard</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f1f5f9;
+      color: #1e293b;
+    }
+
+    header {
+      background: #0f172a;
+      color: white;
+      padding: 20px 8%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 28px;
+      font-weight: bold;
+      color: #38bdf8;
+    }
+
+    button {
+      padding: 12px 18px;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .logout-btn {
+      background: #ef4444;
+      color: white;
+    }
+
+    .container {
+      padding: 40px 8%;
+    }
+
+    .welcome {
+      background: white;
+      padding: 28px;
+      border-radius: 16px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+      margin-bottom: 30px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 22px;
+      margin-bottom: 35px;
+    }
+
+    .card {
+      background: white;
+      padding: 26px;
+      border-radius: 16px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+    }
+
+    .card h3 {
+      margin-top: 0;
+      color: #2563eb;
+    }
+
+    .stat {
+      font-size: 36px;
+      font-weight: bold;
+      color: #0f172a;
+    }
+
+    .section {
+      background: white;
+      padding: 28px;
+      border-radius: 16px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+      margin-bottom: 30px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 13px;
+      margin: 8px 0 18px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      box-sizing: border-box;
+      font-size: 15px;
+    }
+
+    .primary-btn {
+      background: #2563eb;
+      color: white;
+    }
+
+    .secondary-btn {
+      background: #0f172a;
+      color: white;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 18px;
+    }
+
+    th, td {
+      padding: 14px;
+      border-bottom: 1px solid #e2e8f0;
+      text-align: left;
+    }
+
+    th {
+      background: #f8fafc;
+    }
+
+    .message {
+      font-weight: bold;
+      margin-top: 12px;
+    }
+
+    .danger {
+      color: #dc2626;
+    }
+
+    .success {
+      color: #16a34a;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <div>
+    <div class="logo">PickupPulse</div>
+    <div>Superadmin Dashboard</div>
+  </div>
+
+  <button class="logout-btn" onclick="logout()">Logout</button>
+</header>
+
+<div class="container">
+
+  <div class="welcome">
+    <h1>Welcome, Superadmin</h1>
+    <p id="userEmail">Checking login...</p>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Total Schools</h3>
+      <div class="stat" id="schoolCount">0</div>
+    </div>
+
+    <div class="card">
+      <h3>Total Users</h3>
+      <div class="stat" id="userCount">0</div>
+    </div>
+
+    <div class="card">
+      <h3>Total Students</h3>
+      <div class="stat" id="studentCount">0</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Create New School</h2>
+
+    <label>School Name</label>
+    <input type="text" id="schoolName" placeholder="Example: Lincoln Elementary" />
+
+    <button class="primary-btn" onclick="createSchool()">Create School</button>
+
+    <div class="message" id="schoolMessage"></div>
+  </div>
+
+  <div class="section">
+    <h2>Schools</h2>
+
+    <button class="secondary-btn" onclick="loadSchools()">Refresh Schools</button>
+
+    <table>
+      <thead>
+        <tr>
+          <th>School Name</th>
+          <th>School ID</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody id="schoolsTable">
+        <tr>
+          <td colspan="3">Loading schools...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>User Profiles</h2>
+
+    <button class="secondary-btn" onclick="loadProfiles()">Refresh Users</button>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Email</th>
+          <th>Role</th>
+          <th>School ID</th>
+        </tr>
+      </thead>
+      <tbody id="profilesTable">
+        <tr>
+          <td colspan="3">Loading users...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+  const SUPABASE_URL = "https://pthjwhhaupyswopadmsv.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0aGp3aGhhdXB5c3dvcGFkbXN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjgzMTcsImV4cCI6MjA5MTQ0NDMxN30.oSFyNIf3pr9_Nbc8vG4pr9OGU7ufUJgEpW6eQNCwtYs";
+
+  const supabaseClient = supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY
+  );
+
+  async function checkSuperadmin() {
+    const { data: sessionData } = await supabaseClient.auth.getSession();
+
+    if (!sessionData.session) {
+      window.location.href = "login.html";
+      return;
+    }
+
+    const user = sessionData.session.user;
+    document.getElementById("userEmail").innerText = user.email;
+
+    const { data: profile, error } = await supabaseClient
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (error || !profile || profile.role !== "superadmin") {
+      alert("Access denied. Superadmin only.");
+      window.location.href = "login.html";
+      return;
+    }
+
+    loadDashboardData();
+  }
+
+  async function loadDashboardData() {
+    loadSchools();
+    loadProfiles();
+    loadStudentCount();
+  }
+
+  async function loadSchools() {
+    const table = document.getElementById("schoolsTable");
+
+    const { data, error, count } = await supabaseClient
+      .from("schools")
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      table.innerHTML = `<tr><td colspan="3">Error loading schools: ${error.message}</td></tr>`;
+      return;
+    }
+
+    document.getElementById("schoolCount").innerText = count || 0;
+
+    if (!data || data.length === 0) {
+      table.innerHTML = `<tr><td colspan="3">No schools yet.</td></tr>`;
+      return;
+    }
+
+    table.innerHTML = "";
+
+    data.forEach(school => {
+      table.innerHTML += `
+        <tr>
+          <td>${school.school_name}</td>
+          <td>${school.id}</td>
+          <td>${new Date(school.created_at).toLocaleDateString()}</td>
+        </tr>
+      `;
+    });
+  }
+
+  async function createSchool() {
+    const schoolName = document.getElementById("schoolName").value.trim();
+    const message = document.getElementById("schoolMessage");
+
+    if (!schoolName) {
+      message.className = "message danger";
+      message.innerText = "Please enter a school name.";
+      return;
+    }
+
+    const { error } = await supabaseClient
+      .from("schools")
+      .insert([{ school_name: schoolName }]);
+
+    if (error) {
+      message.className = "message danger";
+      message.innerText = error.message;
+      return;
+    }
+
+    message.className = "message success";
+    message.innerText = "School created successfully.";
+
+    document.getElementById("schoolName").value = "";
+    loadSchools();
+  }
+
+  async function loadProfiles() {
+    const table = document.getElementById("profilesTable");
+
+    const { data, error, count } = await supabaseClient
+      .from("profiles")
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      table.innerHTML = `<tr><td colspan="3">Error loading profiles: ${error.message}</td></tr>`;
+      return;
+    }
+
+    document.getElementById("userCount").innerText = count || 0;
+
+    if (!data || data.length === 0) {
+      table.innerHTML = `<tr><td colspan="3">No profiles found.</td></tr>`;
+      return;
+    }
+
+    table.innerHTML = "";
+
+    data.forEach(profile => {
+      table.innerHTML += `
+        <tr>
+          <td>${profile.email || ""}</td>
+          <td>${profile.role || ""}</td>
+          <td>${profile.school_id || ""}</td>
+        </tr>
+      `;
+    });
+  }
+
+  async function loadStudentCount() {
+    const { count, error } = await supabaseClient
+      .from("students")
+      .select("*", { count: "exact", head: true });
+
+    if (error) {
+      document.getElementById("studentCount").innerText = "—";
+      return;
+    }
+
+    document.getElementById("studentCount").innerText = count || 0;
+  }
+
+  async function logout() {
+    await supabaseClient.auth.signOut();
+    window.location.href = "login.html";
+  }
+
+  checkSuperadmin();
+</script>
+
+</body>
+</html>
