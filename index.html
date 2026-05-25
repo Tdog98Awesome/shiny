@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>PickupPulse | QR Code Parent Pickup System</title>
+
+  <meta
+    name="description"
+    content="PickupPulse helps schools streamline parent pickup with QR codes, family pickup cards, student databases, and fast dismissal tools."
+  />
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f6f8fb;
+      color: #1f2937;
+    }
+
+    header {
+      background: #0f172a;
+      color: white;
+      padding: 20px 8%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 28px;
+      font-weight: bold;
+      color: #38bdf8;
+    }
+
+    nav a {
+      color: white;
+      text-decoration: none;
+      margin-left: 20px;
+      font-weight: bold;
+      transition: 0.2s;
+    }
+
+    nav a:hover {
+      color: #38bdf8;
+    }
+
+    .hero {
+      padding: 90px 8%;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 50px;
+      background: linear-gradient(135deg, #dbeafe, #f8fafc);
+    }
+
+    .hero-text {
+      flex: 1;
+      min-width: 300px;
+    }
+
+    .hero h1 {
+      font-size: 52px;
+      margin-bottom: 20px;
+      color: #0f172a;
+      line-height: 1.1;
+    }
+
+    .hero p {
+      font-size: 20px;
+      line-height: 1.7;
+      max-width: 650px;
+    }
+
+    .buttons {
+      margin-top: 35px;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 15px 28px;
+      margin-right: 12px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: 0.2s;
+    }
+
+    .btn-primary {
+      background: #2563eb;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #1d4ed8;
+    }
+
+    .btn-secondary {
+      background: white;
+      color: #2563eb;
+      border: 2px solid #2563eb;
+    }
+
+    .btn-secondary:hover {
+      background: #eff6ff;
+    }
+
+    .hero-card {
+      flex: 1;
+      min-width: 300px;
+      background: white;
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+      text-align: center;
+    }
+
+    .qr-box {
+      width: 190px;
+      height: 190px;
+      margin: 25px auto;
+      background:
+        linear-gradient(90deg, #111 10px, transparent 10px),
+        linear-gradient(#111 10px, transparent 10px);
+      background-size: 30px 30px;
+      border: 10px solid #111827;
+      border-radius: 12px;
+    }
+
+    section {
+      padding: 80px 8%;
+    }
+
+    .section-title {
+      text-align: center;
+      font-size: 40px;
+      margin-bottom: 45px;
+      color: #0f172a;
+    }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 28px;
+    }
+
+    .feature {
+      background: white;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 5px 18px rgba(0,0,0,0.08);
+    }
+
+    .feature h3 {
+      color: #2563eb;
+      margin-top: 0;
+      font-size: 22px;
+    }
+
+    .pricing {
+      background: #0f172a;
+      color: white;
+      text-align: center;
+    }
+
+    .pricing .section-title {
+      color: white;
+    }
+
+    .price-card {
+      background: white;
+      color: #1f2937;
+      max-width: 430px;
+      margin: 0 auto;
+      padding: 40px;
+      border-radius: 20px;
+    }
+
+    .price {
+      font-size: 48px;
+      font-weight: bold;
+      color: #2563eb;
+    }
+
+    .contact {
+      text-align: center;
+      background: #dbeafe;
+    }
+
+    footer {
+      background: #020617;
+      color: white;
+      text-align: center;
+      padding: 28px;
+    }
+
+    .domain {
+      font-size: 18px;
+      color: #38bdf8;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 700px) {
+      header {
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      nav a {
+        margin: 0 8px;
+      }
+
+      .hero h1 {
+        font-size: 38px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div>
+      <div class="logo">PickupPulse</div>
+      <div class="domain">getpickuppulse.com</div>
+    </div>
+
+    <nav>
+      <a href="#features">Features</a>
+      <a href="#pricing">Pricing</a>
+      <a href="login.html">School Login</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+
+    <div class="hero-text">
+      <h1>Modern QR Code Parent Pickup for Schools</h1>
+
+      <p>
+        PickupPulse helps schools organize dismissal with QR code family pickup cards,
+        secure student databases, and fast check-in tools that reduce pickup chaos.
+      </p>
+
+      <div class="buttons">
+        <a href="signup.html" class="btn btn-primary">Get Started</a>
+
+        <a href="#contact" class="btn btn-secondary">
+          Schedule a Demo
+        </a>
+      </div>
+    </div>
+
+    <div class="hero-card">
+      <h2>Family Pickup Card</h2>
+
+      <div class="qr-box"></div>
+
+      <h3>Johnson Family</h3>
+
+      <p>
+        Ava - Grade 1<br>
+        Mason - Grade 4
+      </p>
+    </div>
+
+  </section>
+
+  <section id="features">
+
+    <h2 class="section-title">Why Schools Choose PickupPulse</h2>
+
+    <div class="features">
+
+      <div class="feature">
+        <h3>Secure Student Database</h3>
+
+        <p>
+          Store student names, grade levels, pickup numbers,
+          and family QR codes securely using Supabase.
+        </p>
+      </div>
+
+      <div class="feature">
+        <h3>Family QR Pickup Cards</h3>
+
+        <p>
+          Generate professional family pickup cards automatically
+          with large QR codes and student information.
+        </p>
+      </div>
+
+      <div class="feature">
+        <h3>CSV Upload Support</h3>
+
+        <p>
+          Import entire student rosters directly from spreadsheets
+          instead of manual entry.
+        </p>
+      </div>
+
+      <div class="feature">
+        <h3>Fast Dismissal</h3>
+
+        <p>
+          Speed up parent pickup lines and reduce dismissal confusion
+          with instant QR scanning.
+        </p>
+      </div>
+
+      <div class="feature">
+        <h3>School Dashboards</h3>
+
+        <p>
+          Each school gets its own private login and management dashboard.
+        </p>
+      </div>
+
+      <div class="feature">
+        <h3>PDF Card Generation</h3>
+
+        <p>
+          Instantly create printable family pickup card PDFs
+          for distribution to families.
+        </p>
+      </div>
+
+    </div>
+
+  </section>
+
+  <section class="pricing" id="pricing">
+
+    <h2 class="section-title">Simple School Pricing</h2>
+
+    <div class="price-card">
+
+      <h3>Annual School License</h3>
+
+      <div class="price">$499</div>
+
+      <p>per school year</p>
+
+      <p>
+        Includes student database access, QR card generation,
+        and pickup management tools.
+      </p>
+
+      <br>
+
+      <a href="#contact" class="btn btn-primary">
+        Contact PickupPulse
+      </a>
+
+    </div>
+
+  </section>
+
+  <section class="contact" id="contact">
+
+    <h2 class="section-title">Ready to Modernize Parent Pickup?</h2>
+
+    <p>
+      Contact PickupPulse to learn how your school can simplify dismissal.
+    </p>
+
+    <p>
+      <strong>Website:</strong>
+      getpickuppulse.com
+    </p>
+
+    <p>
+      <strong>Email:</strong>
+      tdogacosta98@gmail.com
+    </p>
+
+  </section>
+
+  <footer>
+    <p>
+      © 2026 PickupPulse — getpickuppulse.com
+    </p>
+  </footer>
+
+</body>
+</html>
