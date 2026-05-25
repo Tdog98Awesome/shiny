@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>PickupPulse Login</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #dbeafe, #f8fafc);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #1e293b;
+    }
+
+    .login-box {
+      background: white;
+      width: 100%;
+      max-width: 420px;
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+    }
+
+    .logo {
+      text-align: center;
+      font-size: 34px;
+      font-weight: bold;
+      color: #2563eb;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #64748b;
+      margin-bottom: 32px;
+    }
+
+    label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    input {
+      width: 100%;
+      padding: 14px;
+      margin-bottom: 20px;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+
+    button {
+      width: 100%;
+      padding: 15px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    .message {
+      text-align: center;
+      margin-top: 18px;
+      font-weight: bold;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 30px;
+      font-size: 14px;
+      color: #64748b;
+    }
+
+    .footer a {
+      color: #2563eb;
+      text-decoration: none;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="login-box">
+    <div class="logo">PickupPulse</div>
+    <div class="subtitle">School Staff Login</div>
+
+    <form id="loginForm">
+      <label>Email</label>
+      <input type="email" id="email" required placeholder="name@school.org" />
+
+      <label>Password</label>
+      <input type="password" id="password" required placeholder="Enter password" />
+
+      <button type="submit" id="loginButton">Login</button>
+    </form>
+
+    <div class="message" id="message"></div>
+
+    <div class="footer">
+      <a href="index.html">Return Home</a>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://pthjwhhaupyswopadmsv.supabase.co";
+    const SUPABASE_ANON_KEY = "PASTE_YOUR_ANON_PUBLIC_KEY_HERE";
+
+    const supabaseClient = supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_ANON_KEY
+    );
+
+    const form = document.getElementById("loginForm");
+    const message = document.getElementById("message");
+    const loginButton = document.getElementById("loginButton");
+
+    form.addEventListener("submit", async function(e) {
+      e.preventDefault();
+
+      message.innerText = "";
+      loginButton.innerText = "Logging in...";
+      loginButton.disabled = true;
+
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email: email,
+        password: password
+      });
+
+      if (error) {
+        message.style.color = "red";
+        message.innerText = error.message;
+        loginButton.innerText = "Login";
+        loginButton.disabled = false;
+        return;
+      }
+
+      const userId = data.user.id;
+
+      const { data: profile, error: profileError } = await supabaseClient
+        .from("profiles")
+        .select("role")
+        .eq("id", userId)
+        .single();
+
+      if (profileError || !profile) {
+        message.style.color = "red";
+        message.innerText = "Login worked, but no profile/role was found.";
+        loginButton.innerText = "Login";
+        loginButton.disabled = false;
+        return;
+      }
+
+      if (profile.role === "superadmin") {
+        window.location.href = "superadmin-dashboard.html";
+      } else if (profile.role === "school_admin") {
+        window.location.href = "school-dashboard.html";
+      } else if (profile.role === "teacher") {
+        window.location.href = "teacher-dashboard.html";
+      } else if (profile.role === "pickup_staff") {
+        window.location.href = "scanner.html";
+      } else {
+        message.style.color = "red";
+        message.innerText = "Unknown role: " + profile.role;
+        loginButton.innerText = "Login";
+        loginButton.disabled = false;
+      }
+    });
+  </script>
+
+</body>
+</html>
