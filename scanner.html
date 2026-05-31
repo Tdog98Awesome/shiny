@@ -231,8 +231,12 @@
     }
 
     const { error: scanError } = await supabaseClient
-      .from("scan_events")
-      .insert([{ qr_value: qrValue }]);
+  .from("scan_events")
+  .insert([
+    {
+      qr_value: qrValue
+    }
+  ]);
 
     if (scanError) {
       showMessage("Scan recognized, but save failed: " + scanError.message, "error");
