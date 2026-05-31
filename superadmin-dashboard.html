@@ -287,10 +287,12 @@
   }
 
   async function loadDashboardData() {
-    loadSchools();
-    loadProfiles();
-    loadStudentCount();
-  }
+  loadSchools();
+  loadProfiles();
+  loadStudentCount();
+  loadRecentScans();
+  listenForScans();
+}
 
   async function loadSchools() {
     const table = document.getElementById("schoolsTable");
