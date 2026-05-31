@@ -404,6 +404,76 @@
   }
 
   checksuper_admin();
+
+  async function loadRecentScans() {
+    const table = document.getElementById("liveScansTable");
+
+    const { data, error } = await supabaseClient
+      .from("scan_events")
+      .select("*")
+      .order("scanned_at", { ascending: false })
+      .limit(20);
+
+    if (error) {
+      table.innerHTML = `<tr><td colspan="3">Error loading scans: ${error.message}</td></tr>`;
+      return;
+    }
+
+    table.innerHTML = "";
+
+    data.forEach(scan => {
+      addScanToTable(scan);
+    });
+  }
+
+  async function addScanToTable(scan) {
+    const table = document.getElementById("liveScansTable");
+
+    if (table.innerText.includes("Waiting for scans")) {
+      table.innerHTML = "";
+    }
+
+    const { data: students, error } = await supabaseClient
+      .from("students")
+      .select("first_name, last_name, grade")
+      .eq("qr_value", scan.qr_value);
+
+    let studentText = "No matching student found";
+
+    if (!error && students && students.length > 0) {
+      studentText = students
+        .map(s => `${s.first_name} ${s.last_name} - Grade ${s.grade}`)
+        .join("<br>");
+    }
+
+    const row = document.createElement("tr");
+
+    row.innerHTML = `
+      <td>${new Date(scan.scanned_at).toLocaleTimeString()}</td>
+      <td>${scan.qr_value}</td>
+      <td>${studentText}</td>
+    `;
+
+    table.prepend(row);
+  }
+
+  function listenForScans() {
+    supabaseClient
+      .channel("live-scan-events")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "scan_events"
+        },
+        payload => {
+          addScanToTable(payload.new);
+        }
+      )
+      .subscribe();
+  }
+  
 </script>
 
 </body>
