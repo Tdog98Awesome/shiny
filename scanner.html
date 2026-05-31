@@ -33,32 +33,33 @@
     }
 
     .container {
-      padding: 30px 8%;
+      padding: 25px 8%;
       max-width: 900px;
       margin: auto;
     }
 
     .card {
       background: white;
-      padding: 25px;
+      padding: 24px;
       border-radius: 18px;
       box-shadow: 0 6px 18px rgba(0,0,0,0.08);
-      margin-bottom: 25px;
+      margin-bottom: 24px;
     }
 
     #reader {
       width: 100%;
-      max-width: 500px;
+      max-width: 520px;
       margin: 20px auto;
     }
 
     button {
-      padding: 13px 18px;
+      padding: 14px 18px;
       border: none;
       border-radius: 10px;
       font-weight: bold;
       cursor: pointer;
       margin: 5px;
+      font-size: 16px;
     }
 
     .start-btn {
@@ -66,33 +67,30 @@
       color: white;
     }
 
-    .stop-btn {
-      background: #ef4444;
-      color: white;
-    }
-
+    .stop-btn,
     .logout-btn {
       background: #ef4444;
       color: white;
     }
 
     .result {
-      font-size: 24px;
+      font-size: 28px;
       font-weight: bold;
       text-align: center;
-      padding: 20px;
-      border-radius: 14px;
+      padding: 24px;
+      border-radius: 16px;
       margin-top: 20px;
     }
 
-    .success {
-      background: #dcfce7;
-      color: #166534;
-    }
-
-    .warning {
+    .ready {
       background: #fef3c7;
       color: #92400e;
+    }
+
+    .success {
+      background: #16a34a;
+      color: white;
+      font-size: 34px;
     }
 
     .error {
@@ -101,10 +99,23 @@
     }
 
     .student-list {
-      font-size: 22px;
-      line-height: 1.6;
+      font-size: 24px;
+      line-height: 1.7;
       text-align: center;
-      margin-top: 15px;
+      margin-top: 18px;
+    }
+
+    .student-name {
+      display: block;
+      font-weight: bold;
+      color: #0f172a;
+    }
+
+    .qr-value {
+      text-align: center;
+      margin-top: 12px;
+      color: #64748b;
+      font-size: 14px;
     }
 
     .small {
@@ -138,33 +149,34 @@
     <div id="reader"></div>
 
     <p class="small">
-      Camera access requires HTTPS. Use this page from getpickuppulse.com, not directly from your computer files.
+      Use this page from https://getpickuppulse.com/scanner.html
     </p>
   </div>
 
   <div class="card">
     <h2>Latest Scan</h2>
-    <div id="scanResult" class="result warning">
-      Waiting for QR scan...
+
+    <div id="scanResult" class="result ready">
+      Ready for scan...
     </div>
 
     <div id="studentNames" class="student-list"></div>
+    <div id="qrValue" class="qr-value"></div>
   </div>
 
 </div>
 
 <script>
   const SUPABASE_URL = "https://pthjwhhaupyswopadmsv.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0aGp3aGhhdXB5c3dvcGFkbXN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjgzMTcsImV4cCI6MjA5MTQ0NDMxN30.oSFyNIf3pr9_Nbc8vG4pr9OGU7ufUJgEpW6eQNCwtYs";
+  const SUPABASE_ANON_KEY = "PASTE_YOUR_ANON_PUBLIC_KEY_HERE";
 
   const supabaseClient = supabase.createClient(
     SUPABASE_URL,
     SUPABASE_ANON_KEY
   );
 
-  let html5QrCode;
-  let lastScannedValue = "";
-  let lastScanTime = 0;
+  let html5QrCode = null;
+  let scanLocked = false;
 
   async function checkLogin() {
     const { data: sessionData } = await supabaseClient.auth.getSession();
@@ -190,13 +202,11 @@
 
     const allowedRoles = [
       "super_admin",
-      "school_admin",
-      "teacher",
       "pickup_staff"
     ];
 
     if (!allowedRoles.includes(profile.role)) {
-      alert("Access denied.");
+      alert("Access denied. Scanner access is for pickup staff and super admin only.");
       window.location.href = "login.html";
       return;
     }
@@ -221,11 +231,30 @@
     };
 
     try {
+      const cameras = await Html5Qrcode.getCameras();
+
+      if (!cameras || cameras.length === 0) {
+        showMessage("No camera found on this device.", "error");
+        html5QrCode = null;
+        return;
+      }
+
+      let backCamera = cameras.find(camera =>
+        camera.label.toLowerCase().includes("back") ||
+        camera.label.toLowerCase().includes("rear") ||
+        camera.label.toLowerCase().includes("environment")
+      );
+
+      let cameraId = backCamera ? backCamera.id : cameras[0].id;
+
       await html5QrCode.start(
-        { facingMode: "environment" },
+        cameraId,
         config,
         onScanSuccess
       );
+
+      showMessage("Ready for scan...", "ready");
+
     } catch (err) {
       showMessage("Camera error: " + err, "error");
       html5QrCode = null;
@@ -237,24 +266,62 @@
       return;
     }
 
-    await html5QrCode.stop();
-    html5QrCode.clear();
+    try {
+      await html5QrCode.stop();
+      html5QrCode.clear();
+    } catch (err) {
+      console.error(err);
+    }
+
     html5QrCode = null;
+    scanLocked = false;
+
+    showMessage("Scanner stopped.", "ready");
   }
 
   async function onScanSuccess(decodedText) {
-    const now = Date.now();
-
-    if (decodedText === lastScannedValue && now - lastScanTime < 4000) {
+    if (scanLocked) {
       return;
     }
 
-    lastScannedValue = decodedText;
-    lastScanTime = now;
+    scanLocked = true;
 
-    showMessage("QR scanned: " + decodedText, "warning");
+    try {
+      await html5QrCode.pause(true);
 
-    await handlePickupScan(decodedText);
+      showMessage("✓ QR Code Recognized", "success");
+
+      document.getElementById("studentNames").innerHTML = "Looking up student...";
+      document.getElementById("qrValue").innerText = "QR Value: " + decodedText;
+
+      if (navigator.vibrate) {
+        navigator.vibrate(200);
+      }
+
+      await handlePickupScan(decodedText);
+
+      setTimeout(async () => {
+        try {
+          if (html5QrCode) {
+            await html5QrCode.resume();
+          }
+        } catch (e) {
+          console.error(e);
+        }
+
+        scanLocked = false;
+
+        showMessage("Ready for next scan...", "ready");
+
+      }, 1000);
+
+    } catch (err) {
+      console.error(err);
+
+      scanLocked = false;
+
+      showMessage("Scan processing error.", "error");
+    }
   }
 
   async function handlePickupScan(qrValue) {
@@ -269,16 +336,21 @@
     }
 
     if (!students || students.length === 0) {
-      showMessage("No matching student found.", "error");
+      showMessage("QR recognized, but no student found.", "error");
+
       document.getElementById("studentNames").innerHTML =
-        "QR Value: " + qrValue;
+        "No matching student found.";
+
     } else {
-      showMessage("Pickup match found!", "success");
+      showMessage("✓ Pickup Match Found", "success");
 
       document.getElementById("studentNames").innerHTML =
         students
-          .map(s => `${s.first_name} ${s.last_name} - Grade ${s.grade}`)
-          .join("<br>");
+          .map(s =>
+            `<span class="student-name">${s.first_name} ${s.last_name}</span>
+             Grade ${s.grade}`
+          )
+          .join("<br><br>");
     }
 
     const { error: scanError } = await supabaseClient
@@ -290,7 +362,7 @@
       ]);
 
     if (scanError) {
-      showMessage("Scan saved failed: " + scanError.message, "error");
+      showMessage("Scan recognized, but save failed: " + scanError.message, "error");
       return;
     }
   }
