@@ -3,156 +3,29 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PickupPulse super_admin Dashboard</title>
+  <title>PickupPulse Superadmin Dashboard</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f1f5f9;
-      color: #1e293b;
-    }
-
-    header {
-      background: #0f172a;
-      color: white;
-      padding: 20px 8%;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .logo {
-      font-size: 28px;
-      font-weight: bold;
-      color: #38bdf8;
-    }
-
-    button {
-      padding: 12px 18px;
-      border: none;
-      border-radius: 8px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-
-    .logout-btn {
-      background: #ef4444;
-      color: white;
-    }
-
-    .container {
-      padding: 40px 8%;
-    }
-
-    .welcome {
-      background: white;
-      padding: 28px;
-      border-radius: 16px;
-      box-shadow: 0 4px 14px rgba(0,0,0,0.08);
-      margin-bottom: 30px;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 22px;
-      margin-bottom: 35px;
-    }
-
-    .card {
-      background: white;
-      padding: 26px;
-      border-radius: 16px;
-      box-shadow: 0 4px 14px rgba(0,0,0,0.08);
-    }
-
-    .card h3 {
-      margin-top: 0;
-      color: #2563eb;
-    }
-
-    .stat {
-      font-size: 36px;
-      font-weight: bold;
-      color: #0f172a;
-    }
-
-    .section {
-      background: white;
-      padding: 28px;
-      border-radius: 16px;
-      box-shadow: 0 4px 14px rgba(0,0,0,0.08);
-      margin-bottom: 30px;
-    }
-
-    input, select {
-      width: 100%;
-      padding: 13px;
-      margin: 8px 0 18px;
-      border-radius: 8px;
-      border: 1px solid #cbd5e1;
-      box-sizing: border-box;
-      font-size: 15px;
-    }
-
-    .primary-btn {
-      background: #2563eb;
-      color: white;
-    }
-
-    .secondary-btn {
-      background: #0f172a;
-      color: white;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 18px;
-    }
-
-    th, td {
-      padding: 14px;
-      border-bottom: 1px solid #e2e8f0;
-      text-align: left;
-    }
-
-    th {
-      background: #f8fafc;
-    }
-
-    .message {
-      font-weight: bold;
-      margin-top: 12px;
-    }
-
-    .danger {
-      color: #dc2626;
-    }
-
-    .success {
-      color: #16a34a;
-    }
-
-    .hidden {
-      display: none;
-    }
-.action-btn {
-  display: inline-block;
-  background: #2563eb;
-  color: white;
-  text-decoration: none;
-  padding: 14px 20px;
-  border-radius: 10px;
-  font-weight: bold;
-}
-
-.action-btn:hover {
-  background: #1d4ed8;
-}
+    body { margin: 0; font-family: Arial, sans-serif; background: #f1f5f9; color: #1e293b; }
+    header { background: #0f172a; color: white; padding: 20px 8%; display: flex; justify-content: space-between; align-items: center; }
+    .logo { font-size: 28px; font-weight: bold; color: #38bdf8; }
+    .container { padding: 40px 8%; }
+    .welcome, .card, .section { background: white; padding: 28px; border-radius: 16px; box-shadow: 0 4px 14px rgba(0,0,0,0.08); margin-bottom: 30px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 22px; margin-bottom: 35px; }
+    .stat { font-size: 36px; font-weight: bold; color: #0f172a; }
+    button, .action-btn { padding: 12px 18px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; }
+    .logout-btn { background: #ef4444; color: white; }
+    .primary-btn, .action-btn { background: #2563eb; color: white; }
+    .secondary-btn { background: #0f172a; color: white; }
+    input { width: 100%; padding: 13px; margin: 8px 0 18px; border-radius: 8px; border: 1px solid #cbd5e1; box-sizing: border-box; font-size: 15px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 18px; }
+    th, td { padding: 14px; border-bottom: 1px solid #e2e8f0; text-align: left; vertical-align: top; }
+    th { background: #f8fafc; }
+    .message { font-weight: bold; margin-top: 12px; }
+    .danger { color: #dc2626; }
+    .success { color: #16a34a; }
   </style>
 </head>
 
@@ -161,42 +34,19 @@
 <header>
   <div>
     <div class="logo">PickupPulse</div>
-    <div>super_admin Dashboard</div>
+    <div>Superadmin Dashboard</div>
   </div>
 
   <button class="logout-btn" onclick="logout()">Logout</button>
 </header>
 
 <div class="container">
-  <div class="section">
-    <h2>Live Pickup Scans</h2>
-
-    <table>
-      <thead>
-        <tr>
-          <th>Time</th>
-          <th>QR Value</th>
-          <th>Student / Family</th>
-        </tr>
-      </thead>
-      <tbody id="liveScansTable">
-        <tr>
-          <td colspan="3">Waiting for scans...</td>
-        </tr>
-       </tbody>
-    </table>
-  </div>
 
   <div class="welcome">
-  <h1>Welcome, Superadmin</h1>
-  <p id="userEmail">Checking login...</p>
-
-  <br>
-
-  <a href="scanner.html" class="action-btn">
-    Open QR Scanner
-  </a>
-</div>
+    <h1>Welcome, Superadmin</h1>
+    <p id="userEmail">Checking login...</p>
+    <a href="scanner.html" class="action-btn">Open QR Scanner</a>
+  </div>
 
   <div class="grid">
     <div class="card">
@@ -213,6 +63,27 @@
       <h3>Total Students</h3>
       <div class="stat" id="studentCount">0</div>
     </div>
+  </div>
+
+  <div class="section">
+    <h2>Live Pickup Scans</h2>
+    <button class="secondary-btn" onclick="loadRecentScans()">Refresh Scans</button>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>School</th>
+          <th>Student / Family</th>
+          <th>QR Value</th>
+        </tr>
+      </thead>
+      <tbody id="liveScansTable">
+        <tr>
+          <td colspan="4">Loading scans...</td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 
   <div class="section">
@@ -274,12 +145,9 @@
   const SUPABASE_URL = "https://pthjwhhaupyswopadmsv.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0aGp3aGhhdXB5c3dvcGFkbXN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjgzMTcsImV4cCI6MjA5MTQ0NDMxN30.oSFyNIf3pr9_Nbc8vG4pr9OGU7ufUJgEpW6eQNCwtYs";
 
-  const supabaseClient = supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_ANON_KEY
-  );
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  async function checksuper_admin() {
+  async function checkSuperadmin() {
     const { data: sessionData } = await supabaseClient.auth.getSession();
 
     if (!sessionData.session) {
@@ -297,7 +165,7 @@
       .single();
 
     if (error || !profile || profile.role !== "super_admin") {
-      alert("Access denied. super_admin only.");
+      alert("Access denied. Superadmin only.");
       window.location.href = "login.html";
       return;
     }
@@ -306,12 +174,113 @@
   }
 
   async function loadDashboardData() {
-  loadSchools();
-  loadProfiles();
-  loadStudentCount();
-  loadRecentScans();
-  listenForScans();
-}
+    loadSchools();
+    loadProfiles();
+    loadStudentCount();
+    loadRecentScans();
+    listenForScans();
+  }
+
+  async function loadRecentScans() {
+    const table = document.getElementById("liveScansTable");
+
+    const { data, error } = await supabaseClient
+      .from("scan_events")
+      .select(`
+        id,
+        qr_value,
+        school_id,
+        scanned_at,
+        schools (
+          school_name
+        )
+      `)
+      .order("scanned_at", { ascending: false })
+      .limit(25);
+
+    if (error) {
+      table.innerHTML = `<tr><td colspan="4">Error loading scans: ${error.message}</td></tr>`;
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      table.innerHTML = `<tr><td colspan="4">No scans yet.</td></tr>`;
+      return;
+    }
+
+    table.innerHTML = "";
+
+    for (const scan of data) {
+      await addScanToTable(scan, false);
+    }
+  }
+
+  async function addScanToTable(scan, prepend = true) {
+    const table = document.getElementById("liveScansTable");
+
+    if (table.innerText.includes("No scans yet") || table.innerText.includes("Loading scans")) {
+      table.innerHTML = "";
+    }
+
+    const { data: students, error } = await supabaseClient
+      .from("students")
+      .select("first_name, last_name, grade")
+      .eq("qr_value", scan.qr_value);
+
+    let studentText = "No matching student found";
+
+    if (!error && students && students.length > 0) {
+      studentText = students
+        .map(s => `${s.first_name} ${s.last_name} - Grade ${s.grade}`)
+        .join("<br>");
+    }
+
+    const schoolName = scan.schools?.school_name || scan.school_id || "No school assigned";
+
+    const row = document.createElement("tr");
+
+    row.innerHTML = `
+      <td>${scan.scanned_at ? new Date(scan.scanned_at).toLocaleTimeString() : ""}</td>
+      <td>${schoolName}</td>
+      <td>${studentText}</td>
+      <td>${scan.qr_value || ""}</td>
+    `;
+
+    if (prepend) {
+      table.prepend(row);
+    } else {
+      table.appendChild(row);
+    }
+  }
+
+  function listenForScans() {
+    supabaseClient
+      .channel("live-scan-events")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "scan_events"
+        },
+        async payload => {
+          const scan = payload.new;
+
+          if (scan.school_id) {
+            const { data: school } = await supabaseClient
+              .from("schools")
+              .select("school_name")
+              .eq("id", scan.school_id)
+              .single();
+
+            scan.schools = school ? { school_name: school.school_name } : null;
+          }
+
+          addScanToTable(scan, true);
+        }
+      )
+      .subscribe();
+  }
 
   async function loadSchools() {
     const table = document.getElementById("schoolsTable");
@@ -411,12 +380,7 @@
       .from("students")
       .select("*", { count: "exact", head: true });
 
-    if (error) {
-      document.getElementById("studentCount").innerText = "—";
-      return;
-    }
-
-    document.getElementById("studentCount").innerText = count || 0;
+    document.getElementById("studentCount").innerText = error ? "—" : count || 0;
   }
 
   async function logout() {
@@ -424,77 +388,7 @@
     window.location.href = "login.html";
   }
 
-  checksuper_admin();
-
-  async function loadRecentScans() {
-    const table = document.getElementById("liveScansTable");
-
-    const { data, error } = await supabaseClient
-      .from("scan_events")
-      .select("*")
-      .order("scanned_at", { ascending: false })
-      .limit(20);
-
-    if (error) {
-      table.innerHTML = `<tr><td colspan="3">Error loading scans: ${error.message}</td></tr>`;
-      return;
-    }
-
-    table.innerHTML = "";
-
-    data.forEach(scan => {
-      addScanToTable(scan);
-    });
-  }
-
-  async function addScanToTable(scan) {
-    const table = document.getElementById("liveScansTable");
-
-    if (table.innerText.includes("Waiting for scans")) {
-      table.innerHTML = "";
-    }
-
-    const { data: students, error } = await supabaseClient
-      .from("students")
-      .select("first_name, last_name, grade")
-      .eq("qr_value", scan.qr_value);
-
-    let studentText = "No matching student found";
-
-    if (!error && students && students.length > 0) {
-      studentText = students
-        .map(s => `${s.first_name} ${s.last_name} - Grade ${s.grade}`)
-        .join("<br>");
-    }
-
-    const row = document.createElement("tr");
-
-    row.innerHTML = `
-      <td>${new Date(scan.scanned_at).toLocaleTimeString()}</td>
-      <td>${scan.qr_value}</td>
-      <td>${studentText}</td>
-    `;
-
-    table.prepend(row);
-  }
-
-  function listenForScans() {
-    supabaseClient
-      .channel("live-scan-events")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "scan_events"
-        },
-        payload => {
-          addScanToTable(payload.new);
-        }
-      )
-      .subscribe();
-  }
-  
+  checkSuperadmin();
 </script>
 
 </body>
