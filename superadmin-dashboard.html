@@ -259,7 +259,7 @@
       .eq("id", user.id)
       .single();
 
-    if (error || !profile || profile.role !== "superadmin") {
+    if (error || !profile || profile.role !== "super_admin") {
       alert("Access denied. Superadmin only.");
       window.location.href = "login.html";
       return;
