@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>PickupPulse Scanner</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f1f5f9;
+      color: #1e293b;
+    }
+
+    header {
+      background: #0f172a;
+      color: white;
+      padding: 18px 8%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 26px;
+      font-weight: bold;
+      color: #38bdf8;
+    }
+
+    .container {
+      padding: 30px 8%;
+      max-width: 900px;
+      margin: auto;
+    }
+
+    .card {
+      background: white;
+      padding: 25px;
+      border-radius: 18px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+      margin-bottom: 25px;
+    }
+
+    #reader {
+      width: 100%;
+      max-width: 500px;
+      margin: 20px auto;
+    }
+
+    button {
+      padding: 13px 18px;
+      border: none;
+      border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      margin: 5px;
+    }
+
+    .start-btn {
+      background: #2563eb;
+      color: white;
+    }
+
+    .stop-btn {
+      background: #ef4444;
+      color: white;
+    }
+
+    .logout-btn {
+      background: #ef4444;
+      color: white;
+    }
+
+    .result {
+      font-size: 24px;
+      font-weight: bold;
+      text-align: center;
+      padding: 20px;
+      border-radius: 14px;
+      margin-top: 20px;
+    }
+
+    .success {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .warning {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .error {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .student-list {
+      font-size: 22px;
+      line-height: 1.6;
+      text-align: center;
+      margin-top: 15px;
+    }
+
+    .small {
+      color: #64748b;
+      font-size: 14px;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <div>
+    <div class="logo">PickupPulse</div>
+    <div>QR Pickup Scanner</div>
+  </div>
+
+  <button class="logout-btn" onclick="logout()">Logout</button>
+</header>
+
+<div class="container">
+
+  <div class="card">
+    <h1>Scan Parent Pickup QR Code</h1>
+    <p id="userInfo">Checking login...</p>
+
+    <button class="start-btn" onclick="startScanner()">Start Scanner</button>
+    <button class="stop-btn" onclick="stopScanner()">Stop Scanner</button>
+
+    <div id="reader"></div>
+
+    <p class="small">
+      Camera access requires HTTPS. Use this page from getpickuppulse.com, not directly from your computer files.
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>Latest Scan</h2>
+    <div id="scanResult" class="result warning">
+      Waiting for QR scan...
+    </div>
+
+    <div id="studentNames" class="student-list"></div>
+  </div>
+
+</div>
+
+<script>
+  const SUPABASE_URL = "https://pthjwhhaupyswopadmsv.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0aGp3aGhhdXB5c3dvcGFkbXN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjgzMTcsImV4cCI6MjA5MTQ0NDMxN30.oSFyNIf3pr9_Nbc8vG4pr9OGU7ufUJgEpW6eQNCwtYs";
+
+  const supabaseClient = supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY
+  );
+
+  let html5QrCode;
+  let lastScannedValue = "";
+  let lastScanTime = 0;
+
+  async function checkLogin() {
+    const { data: sessionData } = await supabaseClient.auth.getSession();
+
+    if (!sessionData.session) {
+      window.location.href = "login.html";
+      return;
+    }
+
+    const user = sessionData.session.user;
+
+    const { data: profile, error } = await supabaseClient
+      .from("profiles")
+      .select("role, school_id, email")
+      .eq("id", user.id)
+      .single();
+
+    if (error || !profile) {
+      alert("No profile found for this user.");
+      window.location.href = "login.html";
+      return;
+    }
+
+    const allowedRoles = [
+      "super_admin",
+      "school_admin",
+      "teacher",
+      "pickup_staff"
+    ];
+
+    if (!allowedRoles.includes(profile.role)) {
+      alert("Access denied.");
+      window.location.href = "login.html";
+      return;
+    }
+
+    document.getElementById("userInfo").innerText =
+      "Logged in as: " + (profile.email || user.email) + " | Role: " + profile.role;
+  }
+
+  async function startScanner() {
+    if (html5QrCode) {
+      return;
+    }
+
+    html5QrCode = new Html5Qrcode("reader");
+
+    const config = {
+      fps: 10,
+      qrbox: {
+        width: 250,
+        height: 250
+      }
+    };
+
+    try {
+      await html5QrCode.start(
+        { facingMode: "environment" },
+        config,
+        onScanSuccess
+      );
+    } catch (err) {
+      showMessage("Camera error: " + err, "error");
+      html5QrCode = null;
+    }
+  }
+
+  async function stopScanner() {
+    if (!html5QrCode) {
+      return;
+    }
+
+    await html5QrCode.stop();
+    html5QrCode.clear();
+    html5QrCode = null;
+  }
+
+  async function onScanSuccess(decodedText) {
+    const now = Date.now();
+
+    if (decodedText === lastScannedValue && now - lastScanTime < 4000) {
+      return;
+    }
+
+    lastScannedValue = decodedText;
+    lastScanTime = now;
+
+    showMessage("QR scanned: " + decodedText, "warning");
+
+    await handlePickupScan(decodedText);
+  }
+
+  async function handlePickupScan(qrValue) {
+    const { data: students, error: studentError } = await supabaseClient
+      .from("students")
+      .select("first_name, last_name, grade, qr_value")
+      .eq("qr_value", qrValue);
+
+    if (studentError) {
+      showMessage("Student lookup error: " + studentError.message, "error");
+      return;
+    }
+
+    if (!students || students.length === 0) {
+      showMessage("No matching student found.", "error");
+      document.getElementById("studentNames").innerHTML =
+        "QR Value: " + qrValue;
+    } else {
+      showMessage("Pickup match found!", "success");
+
+      document.getElementById("studentNames").innerHTML =
+        students
+          .map(s => `${s.first_name} ${s.last_name} - Grade ${s.grade}`)
+          .join("<br>");
+    }
+
+    const { error: scanError } = await supabaseClient
+      .from("scan_events")
+      .insert([
+        {
+          qr_value: qrValue
+        }
+      ]);
+
+    if (scanError) {
+      showMessage("Scan saved failed: " + scanError.message, "error");
+      return;
+    }
+  }
+
+  function showMessage(text, type) {
+    const box = document.getElementById("scanResult");
+
+    box.className = "result " + type;
+    box.innerText = text;
+  }
+
+  async function logout() {
+    await supabaseClient.auth.signOut();
+    window.location.href = "login.html";
+  }
+
+  checkLogin();
+</script>
+
+</body>
+</html>
