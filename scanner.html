@@ -3,126 +3,29 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
   <title>PickupPulse Scanner</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/html5-qrcode"></script>
 
   <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f1f5f9;
-      color: #1e293b;
-    }
-
-    header {
-      background: #0f172a;
-      color: white;
-      padding: 18px 8%;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .logo {
-      font-size: 26px;
-      font-weight: bold;
-      color: #38bdf8;
-    }
-
-    .container {
-      padding: 25px 8%;
-      max-width: 900px;
-      margin: auto;
-    }
-
-    .card {
-      background: white;
-      padding: 24px;
-      border-radius: 18px;
-      box-shadow: 0 6px 18px rgba(0,0,0,0.08);
-      margin-bottom: 24px;
-    }
-
-    #reader {
-      width: 100%;
-      max-width: 520px;
-      margin: 20px auto;
-    }
-
-    button {
-      padding: 14px 18px;
-      border: none;
-      border-radius: 10px;
-      font-weight: bold;
-      cursor: pointer;
-      margin: 5px;
-      font-size: 16px;
-    }
-
-    .start-btn {
-      background: #2563eb;
-      color: white;
-    }
-
-    .stop-btn,
-    .logout-btn {
-      background: #ef4444;
-      color: white;
-    }
-
-    .result {
-      font-size: 28px;
-      font-weight: bold;
-      text-align: center;
-      padding: 24px;
-      border-radius: 16px;
-      margin-top: 20px;
-    }
-
-    .ready {
-      background: #fef3c7;
-      color: #92400e;
-    }
-
-    .success {
-      background: #16a34a;
-      color: white;
-      font-size: 34px;
-    }
-
-    .error {
-      background: #fee2e2;
-      color: #991b1b;
-    }
-
-    .student-list {
-      font-size: 24px;
-      line-height: 1.7;
-      text-align: center;
-      margin-top: 18px;
-    }
-
-    .student-name {
-      display: block;
-      font-weight: bold;
-      color: #0f172a;
-    }
-
-    .qr-value {
-      text-align: center;
-      margin-top: 12px;
-      color: #64748b;
-      font-size: 14px;
-    }
-
-    .small {
-      color: #64748b;
-      font-size: 14px;
-      text-align: center;
-    }
+    body { margin: 0; font-family: Arial, sans-serif; background: #f1f5f9; color: #1e293b; }
+    header { background: #0f172a; color: white; padding: 18px 8%; display: flex; justify-content: space-between; align-items: center; }
+    .logo { font-size: 26px; font-weight: bold; color: #38bdf8; }
+    .container { padding: 25px 8%; max-width: 900px; margin: auto; }
+    .card { background: white; padding: 24px; border-radius: 18px; box-shadow: 0 6px 18px rgba(0,0,0,0.08); margin-bottom: 24px; }
+    #reader { width: 100%; max-width: 520px; margin: 20px auto; }
+    button { padding: 14px 18px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin: 5px; font-size: 16px; }
+    .start-btn { background: #2563eb; color: white; }
+    .stop-btn, .logout-btn { background: #ef4444; color: white; }
+    .result { font-size: 28px; font-weight: bold; text-align: center; padding: 24px; border-radius: 16px; margin-top: 20px; }
+    .ready { background: #fef3c7; color: #92400e; }
+    .success { background: #16a34a; color: white; font-size: 34px; }
+    .error { background: #fee2e2; color: #991b1b; }
+    .student-list { font-size: 24px; line-height: 1.7; text-align: center; margin-top: 18px; }
+    .student-name { display: block; font-weight: bold; color: #0f172a; }
+    .qr-value { text-align: center; margin-top: 12px; color: #64748b; font-size: 14px; }
+    .small { color: #64748b; font-size: 14px; text-align: center; }
   </style>
 </head>
 
@@ -133,12 +36,10 @@
     <div class="logo">PickupPulse</div>
     <div>QR Pickup Scanner</div>
   </div>
-
   <button class="logout-btn" onclick="logout()">Logout</button>
 </header>
 
 <div class="container">
-
   <div class="card">
     <h1>Scan Parent Pickup QR Code</h1>
     <p id="userInfo">Checking login...</p>
@@ -148,87 +49,84 @@
 
     <div id="reader"></div>
 
-    <p class="small">
-      Use this page from https://getpickuppulse.com/scanner.html
-    </p>
+    <p class="small">Use this page from https://getpickuppulse.com/scanner.html</p>
   </div>
 
   <div class="card">
     <h2>Latest Scan</h2>
-
-    <div id="scanResult" class="result ready">
-      Ready for scan...
-    </div>
-
+    <div id="scanResult" class="result ready">Ready for scan...</div>
     <div id="studentNames" class="student-list"></div>
     <div id="qrValue" class="qr-value"></div>
   </div>
-
 </div>
 
 <script>
   const SUPABASE_URL = "https://pthjwhhaupyswopadmsv.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0aGp3aGhhdXB5c3dvcGFkbXN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjgzMTcsImV4cCI6MjA5MTQ0NDMxN30.oSFyNIf3pr9_Nbc8vG4pr9OGU7ufUJgEpW6eQNCwtYs
-";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0aGp3aGhhdXB5c3dvcGFkbXN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjgzMTcsImV4cCI6MjA5MTQ0NDMxN30.oSFyNIf3pr9_Nbc8vG4pr9OGU7ufUJgEpW6eQNCwtYs";
 
-  const supabaseClient = supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_ANON_KEY
-  );
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   let html5QrCode = null;
   let scanLocked = false;
 
   async function checkLogin() {
-    const { data: sessionData } = await supabaseClient.auth.getSession();
+    const userInfo = document.getElementById("userInfo");
 
-    if (!sessionData.session) {
-      window.location.href = "login.html";
-      return;
+    try {
+      const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+
+      if (sessionError) {
+        userInfo.innerText = "Session error: " + sessionError.message;
+        return;
+      }
+
+      if (!sessionData.session) {
+        userInfo.innerText = "Not logged in. Redirecting...";
+        window.location.href = "login.html";
+        return;
+      }
+
+      const user = sessionData.session.user;
+
+      const { data: profile, error } = await supabaseClient
+        .from("profiles")
+        .select("role, school_id, email")
+        .eq("id", user.id)
+        .single();
+
+      if (error) {
+        userInfo.innerText = "Profile lookup error: " + error.message;
+        return;
+      }
+
+      if (!profile) {
+        userInfo.innerText = "No profile found for this user.";
+        return;
+      }
+
+      const allowedRoles = ["super_admin", "pickup_staff"];
+
+      if (!allowedRoles.includes(profile.role)) {
+        userInfo.innerText = "Access denied. Role is: " + profile.role;
+        return;
+      }
+
+      userInfo.innerText =
+        "Logged in as: " + (profile.email || user.email) + " | Role: " + profile.role;
+
+    } catch (err) {
+      userInfo.innerText = "Login check failed: " + err.message;
     }
-
-    const user = sessionData.session.user;
-
-    const { data: profile, error } = await supabaseClient
-      .from("profiles")
-      .select("role, school_id, email")
-      .eq("id", user.id)
-      .single();
-
-    if (error || !profile) {
-      alert("No profile found for this user.");
-      window.location.href = "login.html";
-      return;
-    }
-
-    const allowedRoles = [
-      "super_admin",
-      "pickup_staff"
-    ];
-
-    if (!allowedRoles.includes(profile.role)) {
-      alert("Access denied. Scanner access is for pickup staff and super admin only.");
-      window.location.href = "login.html";
-      return;
-    }
-
-    document.getElementById("userInfo").innerText =
-      "Logged in as: " + (profile.email || user.email) + " | Role: " + profile.role;
   }
 
   async function startScanner() {
-    if (html5QrCode) {
-      return;
-    }
+    if (html5QrCode) return;
 
     html5QrCode = new Html5Qrcode("reader");
 
     const config = {
       fps: 10,
-      qrbox: {
-        width: 250,
-        height: 250
-      }
+      qrbox: { width: 250, height: 250 }
     };
 
     try {
@@ -248,11 +146,7 @@
 
       let cameraId = backCamera ? backCamera.id : cameras[0].id;
 
-      await html5QrCode.start(
-        cameraId,
-        config,
-        onScanSuccess
-      );
+      await html5QrCode.start(cameraId, config, onScanSuccess);
 
       showMessage("Ready for scan...", "ready");
 
@@ -263,9 +157,7 @@
   }
 
   async function stopScanner() {
-    if (!html5QrCode) {
-      return;
-    }
+    if (!html5QrCode) return;
 
     try {
       await html5QrCode.stop();
@@ -276,14 +168,11 @@
 
     html5QrCode = null;
     scanLocked = false;
-
     showMessage("Scanner stopped.", "ready");
   }
 
   async function onScanSuccess(decodedText) {
-    if (scanLocked) {
-      return;
-    }
+    if (scanLocked) return;
 
     scanLocked = true;
 
@@ -291,37 +180,28 @@
       await html5QrCode.pause(true);
 
       showMessage("✓ QR Code Recognized", "success");
-
       document.getElementById("studentNames").innerHTML = "Looking up student...";
       document.getElementById("qrValue").innerText = "QR Value: " + decodedText;
 
-      if (navigator.vibrate) {
-        navigator.vibrate(200);
-      }
+      if (navigator.vibrate) navigator.vibrate(200);
 
       await handlePickupScan(decodedText);
 
       setTimeout(async () => {
         try {
-          if (html5QrCode) {
-            await html5QrCode.resume();
-          }
+          if (html5QrCode) await html5QrCode.resume();
         } catch (e) {
           console.error(e);
         }
 
         scanLocked = false;
-
         showMessage("Ready for next scan...", "ready");
-
       }, 1000);
 
     } catch (err) {
       console.error(err);
-
       scanLocked = false;
-
-      showMessage("Scan processing error.", "error");
+      showMessage("Scan processing error: " + err.message, "error");
     }
   }
 
@@ -338,39 +218,29 @@
 
     if (!students || students.length === 0) {
       showMessage("QR recognized, but no student found.", "error");
-
-      document.getElementById("studentNames").innerHTML =
-        "No matching student found.";
-
+      document.getElementById("studentNames").innerHTML = "No matching student found.";
     } else {
       showMessage("✓ Pickup Match Found", "success");
 
       document.getElementById("studentNames").innerHTML =
         students
           .map(s =>
-            `<span class="student-name">${s.first_name} ${s.last_name}</span>
-             Grade ${s.grade}`
+            `<span class="student-name">${s.first_name} ${s.last_name}</span>Grade ${s.grade}`
           )
           .join("<br><br>");
     }
 
     const { error: scanError } = await supabaseClient
       .from("scan_events")
-      .insert([
-        {
-          qr_value: qrValue
-        }
-      ]);
+      .insert([{ qr_value: qrValue }]);
 
     if (scanError) {
       showMessage("Scan recognized, but save failed: " + scanError.message, "error");
-      return;
     }
   }
 
   function showMessage(text, type) {
     const box = document.getElementById("scanResult");
-
     box.className = "result " + type;
     box.innerText = text;
   }
