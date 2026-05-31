@@ -140,6 +140,19 @@
     .hidden {
       display: none;
     }
+.action-btn {
+  display: inline-block;
+  background: #2563eb;
+  color: white;
+  text-decoration: none;
+  padding: 14px 20px;
+  border-radius: 10px;
+  font-weight: bold;
+}
+
+.action-btn:hover {
+  background: #1d4ed8;
+}
   </style>
 </head>
 
@@ -175,9 +188,15 @@
   </div>
 
   <div class="welcome">
-    <h1>Welcome, super_admin</h1>
-    <p id="userEmail">Checking login...</p>
-  </div>
+  <h1>Welcome, Superadmin</h1>
+  <p id="userEmail">Checking login...</p>
+
+  <br>
+
+  <a href="scanner.html" class="action-btn">
+    Open QR Scanner
+  </a>
+</div>
 
   <div class="grid">
     <div class="card">
