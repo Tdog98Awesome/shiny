@@ -62,12 +62,13 @@
 
 <script>
   const SUPABASE_URL = "https://pthjwhhaupyswopadmsv.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0aGp3aGhhdXB5c3dvcGFkbXN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjgzMTcsImV4cCI6MjA5MTQ0NDMxN30.oSFyNIf3pr9_Nbc8vG4pr9OGU7ufUJgEpW6eQNCwtYs";
+  const SUPABASE_ANON_KEY = "PASTE_YOUR_ANON_PUBLIC_KEY_HERE";
 
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   let html5QrCode = null;
   let scanLocked = false;
+  let currentUserSchoolId = null;
 
   async function checkLogin() {
     const userInfo = document.getElementById("userInfo");
@@ -111,8 +112,12 @@
         return;
       }
 
+      currentUserSchoolId = profile.school_id;
+
       userInfo.innerText =
-        "Logged in as: " + (profile.email || user.email) + " | Role: " + profile.role;
+        "Logged in as: " + (profile.email || user.email) +
+        " | Role: " + profile.role +
+        " | School ID: " + (currentUserSchoolId || "None assigned");
 
     } catch (err) {
       userInfo.innerText = "Login check failed: " + err.message;
@@ -208,12 +213,18 @@
   async function handlePickupScan(qrValue) {
     const { data: students, error: studentError } = await supabaseClient
       .from("students")
-      .select("first_name, last_name, grade, qr_value")
+      .select("first_name, last_name, grade, qr_value, school_id")
       .eq("qr_value", qrValue);
 
     if (studentError) {
       showMessage("Student lookup error: " + studentError.message, "error");
       return;
+    }
+
+    let scanSchoolId = currentUserSchoolId;
+
+    if (students && students.length > 0 && students[0].school_id) {
+      scanSchoolId = students[0].school_id;
     }
 
     if (!students || students.length === 0) {
@@ -231,12 +242,13 @@
     }
 
     const { error: scanError } = await supabaseClient
-  .from("scan_events")
-  .insert([
-    {
-      qr_value: qrValue
-    }
-  ]);
+      .from("scan_events")
+      .insert([
+        {
+          qr_value: qrValue,
+          school_id: scanSchoolId
+        }
+      ]);
 
     if (scanError) {
       showMessage("Scan recognized, but save failed: " + scanError.message, "error");
