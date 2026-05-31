@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PickupPulse Superadmin Dashboard</title>
+  <title>PickupPulse super_admin Dashboard</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -148,7 +148,7 @@
 <header>
   <div>
     <div class="logo">PickupPulse</div>
-    <div>Superadmin Dashboard</div>
+    <div>super_admin Dashboard</div>
   </div>
 
   <button class="logout-btn" onclick="logout()">Logout</button>
@@ -157,7 +157,7 @@
 <div class="container">
 
   <div class="welcome">
-    <h1>Welcome, Superadmin</h1>
+    <h1>Welcome, super_admin</h1>
     <p id="userEmail">Checking login...</p>
   </div>
 
@@ -242,7 +242,7 @@
     SUPABASE_ANON_KEY
   );
 
-  async function checkSuperadmin() {
+  async function checksuper_admin() {
     const { data: sessionData } = await supabaseClient.auth.getSession();
 
     if (!sessionData.session) {
@@ -260,7 +260,7 @@
       .single();
 
     if (error || !profile || profile.role !== "super_admin") {
-      alert("Access denied. Superadmin only.");
+      alert("Access denied. super_admin only.");
       window.location.href = "login.html";
       return;
     }
@@ -385,7 +385,7 @@
     window.location.href = "login.html";
   }
 
-  checkSuperadmin();
+  checksuper_admin();
 </script>
 
 </body>
