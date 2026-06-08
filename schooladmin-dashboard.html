@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PickupPulse School Admin Dashboard</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    body { margin: 0; font-family: Arial, sans-serif; background: #f1f5f9; color: #1e293b; }
+    header { background: #0f172a; color: white; padding: 18px 8%; display: flex; justify-content: space-between; align-items: center; }
+    .logo { font-size: 26px; font-weight: bold; color: #38bdf8; }
+    .container { padding: 25px 8%; max-width: 1200px; margin: auto; }
+    .card { background: white; padding: 22px; border-radius: 18px; box-shadow: 0 6px 18px rgba(0,0,0,0.08); margin-bottom: 24px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; margin-bottom: 24px; }
+    .stat { background: #e0f2fe; padding: 20px; border-radius: 14px; text-align: center; }
+    .stat-number { font-size: 36px; font-weight: bold; color: #0369a1; }
+    .stat-label { color: #475569; margin-top: 6px; }
+    button { padding: 12px 16px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin: 5px; font-size: 15px; }
+    .logout-btn { background: #ef4444; color: white; }
+    .refresh-btn { background: #2563eb; color: white; }
+    .scanner-btn { background: #16a34a; color: white; }
+    table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+    th, td { padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: left; vertical-align: top; }
+    th { background: #f8fafc; color: #334155; }
+    .badge { padding: 5px 9px; border-radius: 999px; font-size: 13px; font-weight: bold; display: inline-block; }
+    .matched { background: #dcfce7; color: #166534; }
+    .not_found, .unknown { background: #fee2e2; color: #991b1b; }
+    .active { background: #dcfce7; color: #166534; }
+    .inactive { background: #fee2e2; color: #991b1b; }
+    .small { color: #64748b; font-size: 14px; }
+    .error { color: #991b1b; font-weight: bold; }
+    .table-wrap { overflow-x: auto; }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <div>
+    <div class="logo">PickupPulse</div>
+    <div>School Admin Dashboard</div>
+  </div>
+
+  <div>
+    <button class="scanner-btn" onclick="window.location.href='scanner.html'">Open Scanner</button>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </div>
+</header>
+
+<div class="container">
+
+  <div class="card">
+    <h1 id="schoolName">Loading school...</h1>
+    <p id="userInfo">Checking login...</p>
+    <button class="refresh-btn" onclick="loadDashboard()">Refresh Dashboard</button>
+    <p class="small">This dashboard only shows students and scans for the school assigned to this admin account.</p>
+  </div>
+
+  <div class="grid">
+    <div class="stat">
+      <div id="activeStudentCount" class="stat-number">0</div>
+      <div class="stat-label">Active Students</div>
+    </div>
+
+    <div class="stat">
+      <div id="todayScanCount" class="stat-number">0</div>
+      <div class="stat-label">Scans Today</div>
+    </div>
+
+    <div class="stat">
+      <div id="matchedScanCount" class="stat-number">0</div>
+      <div class="stat-label">Matched Scans Today</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Recent Pickup Scans</h2>
+    <p id="scanStatus" class="small">Loading scans...</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Student</th>
+            <th>Grade</th>
+            <th>Scanned Value</th>
+            <th>Result</th>
+          </tr>
+        </thead>
+        <tbody id="scanTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Students</h2>
+    <p id="studentStatus" class="small">Loading students...</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>Grade</th>
+            <th>QR Value</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="studentTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const SUPABASE_URL = "https://pthjwhhaupyswopadmsv.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0aGp3aGhhdXB5c3dvcGFkbXN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjgzMTcsImV4cCI6MjA5MTQ0NDMxN30.oSFyNIf3pr9_Nbc8vG4pr9OGU7ufUJgEpW6eQNCwtYs";
+
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let currentUser = null;
+  let currentProfile = null;
+  let currentUserSchoolId = null;
+
+  async function checkLogin() {
+    const userInfo = document.getElementById("userInfo");
+
+    try {
+      const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+
+      if (sessionError) {
+        userInfo.innerText = "Session error: " + sessionError.message;
+        return false;
+      }
+
+      if (!sessionData.session) {
+        userInfo.innerText = "Not logged in. Redirecting...";
+        window.location.href = "login.html";
+        return false;
+      }
+
+      currentUser = sessionData.session.user;
+
+      const { data: profile, error: profileError } = await supabaseClient
+        .from("profiles")
+        .select("id, email, role, school_id")
+        .eq("id", currentUser.id)
+        .single();
+
+      if (profileError) {
+        userInfo.innerText = "Profile lookup error: " + profileError.message;
+        return false;
+      }
+
+      if (!profile) {
+        userInfo.innerText = "No profile found.";
+        return false;
+      }
+
+      currentProfile = profile;
+      currentUserSchoolId = profile.school_id;
+
+      if (profile.role !== "school_admin" && profile.role !== "super_admin") {
+        userInfo.innerText = "Access denied. Role is: " + profile.role;
+        return false;
+      }
+
+      if (!currentUserSchoolId && profile.role === "school_admin") {
+        userInfo.innerText = "No school assigned to this school admin account.";
+        return false;
+      }
+
+      userInfo.innerText =
+        "Logged in as: " + (profile.email || currentUser.email) +
+        " | Role: " + profile.role +
+        " | School ID: " + (currentUserSchoolId || "None");
+
+      return true;
+
+    } catch (err) {
+      userInfo.innerText = "Login check failed: " + err.message;
+      return false;
+    }
+  }
+
+  async function loadSchoolName() {
+    const schoolNameBox = document.getElementById("schoolName");
+
+    if (!currentUserSchoolId) {
+      schoolNameBox.innerText = "School Admin Dashboard";
+      return;
+    }
+
+    const { data: school, error } = await supabaseClient
+      .from("schools")
+      .select("name")
+      .eq("id", currentUserSchoolId)
+      .single();
+
+    if (error) {
+      schoolNameBox.innerText = "School lookup error: " + error.message;
+      return;
+    }
+
+    schoolNameBox.innerText = school.name || "School Admin Dashboard";
+  }
+
+  async function loadStudents() {
+    const studentStatus = document.getElementById("studentStatus");
+    const tbody = document.getElementById("studentTableBody");
+
+    studentStatus.className = "small";
+    studentStatus.innerText = "Loading students...";
+    tbody.innerHTML = "";
+
+    let query = supabaseClient
+      .from("students")
+      .select("id, first_name, last_name, grade, qr_value, active, school_id")
+      .order("last_name", { ascending: true });
+
+    if (currentUserSchoolId) {
+      query = query.eq("school_id", currentUserSchoolId);
+    }
+
+    const { data: students, error } = await query;
+
+    if (error) {
+      studentStatus.innerText = "Error loading students: " + error.message;
+      studentStatus.className = "error";
+      return [];
+    }
+
+    const safeStudents = students || [];
+
+    document.getElementById("activeStudentCount").innerText =
+      safeStudents.filter(s => s.active).length;
+
+    if (safeStudents.length === 0) {
+      studentStatus.innerText = "No students found.";
+      return [];
+    }
+
+    studentStatus.innerText = safeStudents.length + " students loaded.";
+
+    tbody.innerHTML = safeStudents.map(student => `
+      <tr>
+        <td>${escapeHtml(student.first_name || "")} ${escapeHtml(student.last_name || "")}</td>
+        <td>${escapeHtml(student.grade || "")}</td>
+        <td>${escapeHtml(student.qr_value || "")}</td>
+        <td>
+          <span class="badge ${student.active ? "active" : "inactive"}">
+            ${student.active ? "Active" : "Inactive"}
+          </span>
+        </td>
+      </tr>
+    `).join("");
+
+    return safeStudents;
+  }
+
+  async function loadScans() {
+    const scanStatus = document.getElementById("scanStatus");
+    const tbody = document.getElementById("scanTableBody");
+
+    scanStatus.className = "small";
+    scanStatus.innerText = "Loading scans...";
+    tbody.innerHTML = "";
+
+    let query = supabaseClient
+      .from("scan_events")
+      .select(`
+        id,
+        school_id,
+        student_id,
+        scanned_value,
+        qr_value,
+        result,
+        created_at,
+        scanned_at,
+        students (
+          first_name,
+          last_name,
+          grade
+        )
+      `)
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (currentUserSchoolId) {
+      query = query.eq("school_id", currentUserSchoolId);
+    }
+
+    const { data: scans, error } = await query;
+
+    if (error) {
+      scanStatus.innerText = "Error loading scans: " + error.message;
+      scanStatus.className = "error";
+      return [];
+    }
+
+    const safeScans = scans || [];
+
+    const todayString = new Date().toDateString();
+
+    const todayScans = safeScans.filter(scan => {
+      const dateValue = scan.created_at || scan.scanned_at;
+      if (!dateValue) return false;
+      return new Date(dateValue).toDateString() === todayString;
+    });
+
+    document.getElementById("todayScanCount").innerText = todayScans.length;
+    document.getElementById("matchedScanCount").innerText =
+      todayScans.filter(scan => scan.result === "matched").length;
+
+    if (safeScans.length === 0) {
+      scanStatus.innerText = "No scans found yet.";
+      return [];
+    }
+
+    scanStatus.innerText = "Showing latest " + safeScans.length + " scans.";
+
+    tbody.innerHTML = safeScans.map(scan => {
+      const student = scan.students;
+
+      const studentName = student
+        ? `${escapeHtml(student.first_name || "")} ${escapeHtml(student.last_name || "")}`
+        : "No student match";
+
+      const grade = student ? escapeHtml(student.grade || "") : "-";
+      const scanTime = formatDateTime(scan.created_at || scan.scanned_at);
+      const scannedValue = escapeHtml(scan.scanned_value || scan.qr_value || "");
+      const result = scan.result || "unknown";
+      const resultClass = result === "matched" ? "matched" : result === "not_found" ? "not_found" : "unknown";
+
+      return `
+        <tr>
+          <td>${scanTime}</td>
+          <td>${studentName}</td>
+          <td>${grade}</td>
+          <td>${scannedValue}</td>
+          <td>
+            <span class="badge ${resultClass}">
+              ${escapeHtml(result)}
+            </span>
+          </td>
+        </tr>
+      `;
+    }).join("");
+
+    return safeScans;
+  }
+
+  async function loadDashboard() {
+    await loadSchoolName();
+    await loadStudents();
+    await loadScans();
+  }
+
+  function formatDateTime(value) {
+    if (!value) return "-";
+    return new Date(value).toLocaleString();
+  }
+
+  function escapeHtml(value) {
+    return String(value)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  async function logout() {
+    await supabaseClient.auth.signOut();
+    window.location.href = "login.html";
+  }
+
+  async function init() {
+    const ok = await checkLogin();
+    if (!ok) return;
+
+    await loadDashboard();
+
+    setInterval(loadScans, 5000);
+  }
+
+  init();
+</script>
+
+</body>
+</html>
