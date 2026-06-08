@@ -262,10 +262,11 @@
   .insert([
     {
       school_id: scanSchoolId,
-      student_id: firstStudentId,
       scanned_value: cleanQrValue,
       qr_value: cleanQrValue,
+      student_id: firstStudentId,
       result: students && students.length > 0 ? "matched" : "not_found",
+      created_at: new Date().toISOString(),
       scanned_at: new Date().toISOString()
     }
   ]);
