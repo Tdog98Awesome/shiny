@@ -143,13 +143,13 @@
         return;
       }
 
-      let backCamera = cameras.find(camera =>
+      const backCamera = cameras.find(camera =>
         camera.label.toLowerCase().includes("back") ||
         camera.label.toLowerCase().includes("rear") ||
         camera.label.toLowerCase().includes("environment")
       );
 
-      let cameraId = backCamera ? backCamera.id : cameras[0].id;
+      const cameraId = backCamera ? backCamera.id : cameras[0].id;
 
       await html5QrCode.start(cameraId, config, onScanSuccess);
 
@@ -186,7 +186,7 @@
 
       showMessage("✓ QR Code Recognized", "success");
       document.getElementById("studentNames").innerHTML = "Looking up student...";
-      document.getElementById("qrValue").innerText = "";
+      document.getElementById("qrValue").innerText = "QR value: " + decodedText;
 
       if (navigator.vibrate) navigator.vibrate(200);
 
@@ -200,8 +200,11 @@
         }
 
         scanLocked = false;
-        showMessage("Ready for next scan...", "ready");
-      }, 1000);
+
+        if (!document.getElementById("scanResult").classList.contains("error")) {
+          showMessage("Ready for next scan...", "ready");
+        }
+      }, 1500);
 
     } catch (err) {
       console.error(err);
@@ -211,25 +214,38 @@
   }
 
   async function handlePickupScan(qrValue) {
+    const cleanQrValue = String(qrValue).trim();
+
     const { data: students, error: studentError } = await supabaseClient
       .from("students")
-      .select("first_name, last_name, grade, qr_value, school_id")
-      .eq("qr_value", qrValue);
+      .select("id, first_name, last_name, grade, qr_value, school_id")
+      .eq("qr_value", cleanQrValue)
+      .eq("active", true);
 
     if (studentError) {
       showMessage("Student lookup error: " + studentError.message, "error");
       return;
     }
 
-    let scanSchoolId = currentUserSchoolId;
+    let scanSchoolId = null;
+    let firstStudentId = null;
 
-    if (students && students.length > 0 && students[0].school_id) {
+    if (students && students.length > 0) {
       scanSchoolId = students[0].school_id;
+      firstStudentId = students[0].id;
+    } else if (currentUserSchoolId) {
+      scanSchoolId = currentUserSchoolId;
+    }
+
+    if (!scanSchoolId) {
+      showMessage("Scan save failed: no school_id found for this QR code.", "error");
+      document.getElementById("studentNames").innerHTML = "No matching student found.";
+      return;
     }
 
     if (!students || students.length === 0) {
-      showMessage("QR recognized, but no student found.", "error");
-      document.getElementById("studentNames").innerHTML = "No matching student found.";
+      showMessage("QR recognized, but no active student found.", "error");
+      document.getElementById("studentNames").innerHTML = "No matching active student found.";
     } else {
       showMessage("✓ Pickup Match Found", "success");
 
@@ -245,14 +261,19 @@
       .from("scan_events")
       .insert([
         {
-          qr_value: qrValue,
-          school_id: scanSchoolId
+          qr_value: cleanQrValue,
+          school_id: scanSchoolId,
+          student_id: firstStudentId
         }
       ]);
 
     if (scanError) {
       showMessage("Scan recognized, but save failed: " + scanError.message, "error");
+      console.error("Scan save error:", scanError);
+      return;
     }
+
+    console.log("Scan saved successfully.");
   }
 
   function showMessage(text, type) {
