@@ -192,7 +192,7 @@
         school_id,
         scanned_at,
         schools (
-          school_name
+          name
         )
       `)
       .order("scanned_at", { ascending: false })
@@ -235,7 +235,7 @@
         .join("<br>");
     }
 
-    const schoolName = scan.schools?.school_name || scan.school_id || "No school assigned";
+    const schoolName = scan.schools?.name || scan.school_id || "No school assigned";
 
     const row = document.createElement("tr");
 
@@ -269,11 +269,11 @@
           if (scan.school_id) {
             const { data: school } = await supabaseClient
               .from("schools")
-              .select("school_name")
+              .select("name")
               .eq("id", scan.school_id)
               .single();
 
-            scan.schools = school ? { school_name: school.school_name } : null;
+            scan.schools = school ? { name: school.name } : null;
           }
 
           addScanToTable(scan, true);
@@ -307,7 +307,7 @@
     data.forEach(school => {
       table.innerHTML += `
         <tr>
-          <td>${school.school_name}</td>
+          <td>${school.name}</td>
           <td>${school.id}</td>
           <td>${new Date(school.created_at).toLocaleDateString()}</td>
         </tr>
@@ -327,7 +327,7 @@
 
     const { error } = await supabaseClient
       .from("schools")
-      .insert([{ school_name: schoolName }]);
+      .insert([{ name: schoolName }]);
 
     if (error) {
       message.className = "message danger";
