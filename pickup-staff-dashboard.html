@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>PickUpPulse Staff Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f7fb;
+      color: #1f2937;
+    }
+
+    header {
+      background: #0f172a;
+      color: white;
+      padding: 18px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+
+    button {
+      border: none;
+      padding: 10px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .logout {
+      background: #ef4444;
+      color: white;
+    }
+
+    .container {
+      padding: 24px;
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .card h2 {
+      margin: 0;
+      font-size: 16px;
+      color: #64748b;
+    }
+
+    .card p {
+      font-size: 34px;
+      margin: 10px 0 0;
+      font-weight: bold;
+    }
+
+    .section {
+      background: white;
+      padding: 20px;
+      border-radius: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom: 24px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 14px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      font-size: 16px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 12px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    th {
+      background: #f8fafc;
+      color: #475569;
+    }
+
+    .success {
+      color: #16a34a;
+      font-weight: bold;
+    }
+
+    .denied {
+      color: #dc2626;
+      font-weight: bold;
+    }
+
+    .small {
+      color: #64748b;
+      font-size: 14px;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>PickUpPulse Staff Dashboard</h1>
+    <button class="logout" onclick="logout()">Logout</button>
+  </header>
+
+  <div class="container">
+    <p id="schoolName" class="small">Loading school...</p>
+
+    <div class="cards">
+      <div class="card">
+        <h2>Today’s Scans</h2>
+        <p id="todayScans">0</p>
+      </div>
+
+      <div class="card">
+        <h2>Successful Pickups</h2>
+        <p id="successfulScans">0</p>
+      </div>
+
+      <div class="card">
+        <h2>Denied / Errors</h2>
+        <p id="deniedScans">0</p>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Student Lookup</h2>
+      <input 
+        id="studentSearch" 
+        type="text" 
+        placeholder="Search by student name, student number, or QR value..."
+        oninput="searchStudents()"
+      />
+
+      <table>
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>Grade</th>
+            <th>Student #</th>
+            <th>QR Value</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="studentResults">
+          <tr>
+            <td colspan="5">Start typing to search students.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>Live Pickup Scan Feed</h2>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Student</th>
+            <th>Grade</th>
+            <th>QR Value</th>
+            <th>Result</th>
+            <th>Device</th>
+          </tr>
+        </thead>
+        <tbody id="scanFeed">
+          <tr>
+            <td colspan="6">Loading scans...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://pthjwhhaupyswopadmsv.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0aGp3aGhhdXB5c3dvcGFkbXN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjgzMTcsImV4cCI6MjA5MTQ0NDMxN30.oSFyNIf3pr9_Nbc8vG4pr9OGU7ufUJgEpW6eQNCwtYs";
+
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let currentUser = null;
+    let currentProfile = null;
+    let currentSchoolId = null;
+
+    async function init() {
+      const { data: { user }, error } = await supabaseClient.auth.getUser();
+
+      if (error || !user) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      currentUser = user;
+
+      const { data: profile, error: profileError } = await supabaseClient
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (profileError || !profile) {
+        alert("No profile found for this user.");
+        await logout();
+        return;
+      }
+
+      currentProfile = profile;
+      currentSchoolId = profile.school_id;
+
+      if (!["staff", "school_staff", "school_admin", "superadmin"].includes(profile.role)) {
+        alert("You do not have permission to view this dashboard.");
+        await logout();
+        return;
+      }
+
+      if (!currentSchoolId && profile.role !== "superadmin") {
+        alert("This staff account is not assigned to a school.");
+        await logout();
+        return;
+      }
+
+      await loadSchoolName();
+      await loadTodayStats();
+      await loadScanFeed();
+      subscribeToScans();
+    }
+
+    async function loadSchoolName() {
+      if (!currentSchoolId) {
+        document.getElementById("schoolName").textContent = "Superadmin view";
+        return;
+      }
+
+      const { data, error } = await supabaseClient
+        .from("schools")
+        .select("name")
+        .eq("id", currentSchoolId)
+        .single();
+
+      document.getElementById("schoolName").textContent =
+        error ? "School unavailable" : data.name;
+    }
+
+    function getTodayStartISO() {
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      return now.toISOString();
+    }
+
+    async function loadTodayStats() {
+      const todayStart = getTodayStartISO();
+
+      let query = supabaseClient
+        .from("scan_events")
+        .select("id, result", { count: "exact" })
+        .gte("created_at", todayStart);
+
+      if (currentSchoolId) {
+        query = query.eq("school_id", currentSchoolId);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      const total = data.length;
+      const successful = data.filter(s => s.result === "success").length;
+      const denied = data.filter(s => s.result !== "success").length;
+
+      document.getElementById("todayScans").textContent = total;
+      document.getElementById("successfulScans").textContent = successful;
+      document.getElementById("deniedScans").textContent = denied;
+    }
+
+    async function loadScanFeed() {
+      let query = supabaseClient
+        .from("scan_events")
+        .select(`
+          id,
+          created_at,
+          scanned_value,
+          qr_value,
+          result,
+          device_name,
+          students (
+            first_name,
+            last_name,
+            grade
+          )
+        `)
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      if (currentSchoolId) {
+        query = query.eq("school_id", currentSchoolId);
+      }
+
+      const { data, error } = await query;
+
+      const tbody = document.getElementById("scanFeed");
+
+      if (error) {
+        console.error(error);
+        tbody.innerHTML = `<tr><td colspan="6">Error loading scans.</td></tr>`;
+        return;
+      }
+
+      if (!data.length) {
+        tbody.innerHTML = `<tr><td colspan="6">No scans yet today.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = data.map(scan => {
+        const student = scan.students
+          ? `${scan.students.first_name} ${scan.students.last_name}`
+          : "Unknown";
+
+        const grade = scan.students?.grade ?? "-";
+        const qr = scan.qr_value || scan.scanned_value || "-";
+        const time = new Date(scan.created_at).toLocaleTimeString();
+
+        const resultClass = scan.result === "success" ? "success" : "denied";
+
+        return `
+          <tr>
+            <td>${time}</td>
+            <td>${student}</td>
+            <td>${grade}</td>
+            <td>${qr}</td>
+            <td class="${resultClass}">${scan.result || "-"}</td>
+            <td>${scan.device_name || "-"}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    async function searchStudents() {
+      const search = document.getElementById("studentSearch").value.trim();
+      const tbody = document.getElementById("studentResults");
+
+      if (search.length < 2) {
+        tbody.innerHTML = `<tr><td colspan="5">Start typing to search students.</td></tr>`;
+        return;
+      }
+
+      let query = supabaseClient
+        .from("students")
+        .select("id, first_name, last_name, grade, student_number, qr_value, active")
+        .or(
+          `first_name.ilike.%${search}%,last_name.ilike.%${search}%,student_number.ilike.%${search}%,qr_value.ilike.%${search}%`
+        )
+        .limit(25);
+
+      if (currentSchoolId) {
+        query = query.eq("school_id", currentSchoolId);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error(error);
+        tbody.innerHTML = `<tr><td colspan="5">Search error.</td></tr>`;
+        return;
+      }
+
+      if (!data.length) {
+        tbody.innerHTML = `<tr><td colspan="5">No matching students found.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = data.map(student => `
+        <tr>
+          <td>${student.first_name} ${student.last_name}</td>
+          <td>${student.grade ?? "-"}</td>
+          <td>${student.student_number ?? "-"}</td>
+          <td>${student.qr_value ?? "-"}</td>
+          <td>${student.active ? "Active" : "Inactive"}</td>
+        </tr>
+      `).join("");
+    }
+
+    function subscribeToScans() {
+      supabaseClient
+        .channel("staff-scan-feed")
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "scan_events"
+          },
+          async () => {
+            await loadTodayStats();
+            await loadScanFeed();
+          }
+        )
+        .subscribe();
+    }
+
+    async function logout() {
+      await supabaseClient.auth.signOut();
+      window.location.href = "login.html";
+    }
+
+    init();
+  </script>
+</body>
+</html>
