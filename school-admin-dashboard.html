@@ -268,7 +268,9 @@
 
     scanStatus.className = "small";
     scanStatus.innerText = "Loading scans...";
-    tbody.innerHTML = "";
+    if (!tbody.innerHTML.trim()) {
+  tbody.innerHTML = "";
+}
 
     let query = supabaseClient
       .from("scan_events")
@@ -379,16 +381,29 @@
     window.location.href = "login.html";
   }
 
-  async function init() {
-    const ok = await checkLogin();
-    if (!ok) return;
+  let scansRefreshTimer = null;
+let scansLoading = false;
 
-    await loadDashboard();
+async function refreshScansSafely() {
+  if (scansLoading) return;
 
-    setInterval(loadScans, 5000);
+  scansLoading = true;
+  await loadScans();
+  scansLoading = false;
+}
+
+async function init() {
+  const ok = await checkLogin();
+  if (!ok) return;
+
+  await loadDashboard();
+
+  if (!scansRefreshTimer) {
+    scansRefreshTimer = setInterval(refreshScansSafely, 15000);
   }
+}
 
-  init();
+init();
 </script>
 
 </body>
