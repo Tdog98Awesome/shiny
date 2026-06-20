@@ -211,18 +211,18 @@
         }
       }
 
-      if (profile.role === "super_admin") {
-        window.location.href = "superadmin-dashboard.html";
-      } else if (profile.role === "school_admin") {
-        window.location.href = "school-admin-dashboard.html";
-      } else if (profile.role === "pickup_staff") {
-        window.location.href = "scanner.html";
-      } else {
-        message.style.color = "red";
-        message.innerText = "Unknown role: " + profile.role;
-        loginButton.innerText = "Login";
-        loginButton.disabled = false;
-      }
+      if (profile.role === "super_admin" || profile.role === "superadmin") {
+  window.location.href = "superadmin-dashboard.html";
+} else if (profile.role === "school_admin") {
+  window.location.href = "school-admin-dashboard.html";
+} else if (profile.role === "pickup_staff") {
+  window.location.href = "scanner.html";
+} else {
+  message.style.color = "red";
+  message.innerText = "Unknown role: " + profile.role;
+  loginButton.innerText = "Login";
+  loginButton.disabled = false;
+}
     });
   </script>
 
