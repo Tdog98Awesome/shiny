@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <title>PickupPulse Login</title>
+  <title>PickUpPulse Login</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -75,6 +75,11 @@
       background: #1d4ed8;
     }
 
+    button:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+    }
+
     .message {
       text-align: center;
       margin-top: 18px;
@@ -99,7 +104,7 @@
 <body>
 
   <div class="login-box">
-    <div class="logo">PickupPulse</div>
+    <div class="logo">PickUpPulse</div>
     <div class="subtitle">School Staff Login</div>
 
     <form id="loginForm">
@@ -159,27 +164,9 @@
 
       const { data: profile, error: profileError } = await supabaseClient
         .from("profiles")
-        .select("role")
+        .select("role, school_id")
         .eq("id", userId)
         .single();
-
-      // If this is a school admin, check whether their school is approved
-if (profile.role === "school_admin") {
-  const { data: school, error: schoolError } = await supabase
-    .from("schools")
-    .select("approved")
-    .eq("id", profile.school_id)
-    .single();
-
-  if (schoolError) throw schoolError;
-
-  if (school.approved === false) {
-    alert("Your school account is pending approval. PickUpPulse will contact you once your school is approved.");
-    await supabase.auth.signOut();
-    window.location.href = "login.html";
-    return;
-  }
-}
 
       if (profileError || !profile) {
         message.style.color = "red";
@@ -189,39 +176,45 @@ if (profile.role === "school_admin") {
         return;
       }
 
-if (profile.role === "school_admin") {
+      if (profile.role === "school_admin") {
+        const { data: school, error: schoolError } = await supabaseClient
+          .from("schools")
+          .select("approved, payment_status")
+          .eq("id", profile.school_id)
+          .single();
 
-    const { data: school, error: schoolError } = await supabase
-        .from("schools")
-        .select("approved, payment_status")
-        .eq("id", profile.school_id)
-        .single();
+        if (schoolError || !school) {
+          message.style.color = "red";
+          message.innerText = "Could not verify school approval/payment status.";
+          await supabaseClient.auth.signOut();
+          loginButton.innerText = "Login";
+          loginButton.disabled = false;
+          return;
+        }
 
-    if (schoolError) {
-        alert(schoolError.message);
-        return;
-    }
+        if (school.approved !== true) {
+          message.style.color = "orange";
+          message.innerText = "Your school account is pending approval.";
+          await supabaseClient.auth.signOut();
+          loginButton.innerText = "Login";
+          loginButton.disabled = false;
+          return;
+        }
 
-    if (school.approved !== true) {
-        alert("Your school account is pending approval.");
-        await supabase.auth.signOut();
-        return;
-    }
+        if (school.payment_status !== "paid") {
+          message.style.color = "red";
+          message.innerText = "Your school account is not active yet. Please complete payment.";
+          await supabaseClient.auth.signOut();
+          loginButton.innerText = "Login";
+          loginButton.disabled = false;
+          return;
+        }
+      }
 
-    if (school.payment_status !== "paid") {
-        alert("Your school account is not active yet. Please complete payment.");
-        await supabase.auth.signOut();
-        return;
-    }
-}
-
-      
-      if (profile.role === "super_admin") {
+      if (profile.role === "superadmin") {
         window.location.href = "superadmin-dashboard.html";
       } else if (profile.role === "school_admin") {
-        window.location.href = "school-dashboard.html";
-      } else if (profile.role === "teacher") {
-        window.location.href = "teacher-dashboard.html";
+        window.location.href = "school-admin-dashboard.html";
       } else if (profile.role === "pickup_staff") {
         window.location.href = "scanner.html";
       } else {
