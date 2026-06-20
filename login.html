@@ -189,6 +189,33 @@ if (profile.role === "school_admin") {
         return;
       }
 
+if (profile.role === "school_admin") {
+
+    const { data: school, error: schoolError } = await supabase
+        .from("schools")
+        .select("approved, payment_status")
+        .eq("id", profile.school_id)
+        .single();
+
+    if (schoolError) {
+        alert(schoolError.message);
+        return;
+    }
+
+    if (school.approved !== true) {
+        alert("Your school account is pending approval.");
+        await supabase.auth.signOut();
+        return;
+    }
+
+    if (school.payment_status !== "paid") {
+        alert("Your school account is not active yet. Please complete payment.");
+        await supabase.auth.signOut();
+        return;
+    }
+}
+
+      
       if (profile.role === "super_admin") {
         window.location.href = "superadmin-dashboard.html";
       } else if (profile.role === "school_admin") {
