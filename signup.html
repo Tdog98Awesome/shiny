@@ -128,17 +128,18 @@ async function signup(){
 
         const user = data.user;
 
-        // Create School Record
-        const { data: schoolData, error: schoolError } =
-        await supabase
-        .from("schools")
-        .insert({
-            name: schoolName
-        })
-        .select()
-        .single();
+        // Create School Record (Pending Approval)
+const { data: schoolData, error: schoolError } =
+await supabase
+.from("schools")
+.insert({
+    name: schoolName,
+    approved: false
+})
+.select()
+.single();
 
-        if(schoolError) throw schoolError;
+if (schoolError) throw schoolError;
 
         // Create Profile
         const { error: profileError } =
@@ -157,7 +158,7 @@ async function signup(){
 
         msg.style.color = "green";
         msg.innerHTML =
-        "Account created! Check your email to verify your account.";
+"Account created! Check your email to verify your account. Your school will remain pending until approved by PickUpPulse.";
 
     }
     catch(err){
