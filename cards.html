@@ -2,12 +2,52 @@
 <html>
 <head>
   <title>Create Pickup Cards - PickUpPulse</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
   <h1>Create Parent Pickup Cards</h1>
 
-  <form action="https://pickuppulse-card-generator.onrender.com/generate-cards" method="POST">
-  <button type="submit">Generate Pickup Cards PDF</button>
-</form>
+  <form id="cardsForm" action="https://pickuppulse-card-generator.onrender.com/generate-cards" method="POST">
+    <input type="hidden" name="school_id" id="school_id" />
+    <button type="submit">Generate Pickup Cards PDF</button>
+  </form>
+
+  <script>
+    const SUPABASE_URL = "https://pthjwhhaupyswopadmsv.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0aGp3aGhhdXB5c3dvcGFkbXN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjgzMTcsImV4cCI6MjA5MTQ0NDMxN30.oSFyNIf3pr9_Nbc8vG4pr9OGU7ufUJgEpW6eQNCwtYs";
+
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    async function loadSchoolId() {
+      const { data: sessionData } = await supabaseClient.auth.getSession();
+
+      if (!sessionData.session) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      const userId = sessionData.session.user.id;
+
+      const { data: profile, error } = await supabaseClient
+        .from("profiles")
+        .select("school_id, role")
+        .eq("id", userId)
+        .single();
+
+      if (error || !profile) {
+        alert("Could not find your school profile.");
+        return;
+      }
+
+      if (profile.role !== "school_admin" && profile.role !== "superadmin" && profile.role !== "super_admin") {
+        alert("You do not have permission to create pickup cards.");
+        return;
+      }
+
+      document.getElementById("school_id").value = profile.school_id;
+    }
+
+    loadSchoolId();
+  </script>
 </body>
 </html>
