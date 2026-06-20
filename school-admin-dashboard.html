@@ -29,9 +29,11 @@
     .not_found, .unknown { background: #fee2e2; color: #991b1b; }
     .active { background: #dcfce7; color: #166534; }
     .inactive { background: #fee2e2; color: #991b1b; }
+    .picked-up { background: #dbeafe; color: #1d4ed8; }
     .small { color: #64748b; font-size: 14px; }
     .error { color: #991b1b; font-weight: bold; }
     .table-wrap { overflow-x: auto; }
+    input[type="checkbox"] { width: 22px; height: 22px; cursor: pointer; }
   </style>
 </head>
 
@@ -83,6 +85,7 @@
       <table>
         <thead>
           <tr>
+            <th>Picked Up</th>
             <th>Time</th>
             <th>Student</th>
             <th>Grade</th>
@@ -125,66 +128,56 @@
   let currentUser = null;
   let currentProfile = null;
   let currentUserSchoolId = null;
+  let scansLoading = false;
+  let scansRefreshTimer = null;
 
   async function checkLogin() {
     const userInfo = document.getElementById("userInfo");
 
-    try {
-      const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+    const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
 
-      if (sessionError) {
-        userInfo.innerText = "Session error: " + sessionError.message;
-        return false;
-      }
-
-      if (!sessionData.session) {
-        userInfo.innerText = "Not logged in. Redirecting...";
-        window.location.href = "login.html";
-        return false;
-      }
-
-      currentUser = sessionData.session.user;
-
-      const { data: profile, error: profileError } = await supabaseClient
-        .from("profiles")
-        .select("id, email, role, school_id")
-        .eq("id", currentUser.id)
-        .single();
-
-      if (profileError) {
-        userInfo.innerText = "Profile lookup error: " + profileError.message;
-        return false;
-      }
-
-      if (!profile) {
-        userInfo.innerText = "No profile found.";
-        return false;
-      }
-
-      currentProfile = profile;
-      currentUserSchoolId = profile.school_id;
-
-      if (profile.role !== "school_admin" && profile.role !== "super_admin") {
-        userInfo.innerText = "Access denied. Role is: " + profile.role;
-        return false;
-      }
-
-      if (!currentUserSchoolId && profile.role === "school_admin") {
-        userInfo.innerText = "No school assigned to this school admin account.";
-        return false;
-      }
-
-      userInfo.innerText =
-        "Logged in as: " + (profile.email || currentUser.email) +
-        " | Role: " + profile.role +
-        " | School ID: " + (currentUserSchoolId || "None");
-
-      return true;
-
-    } catch (err) {
-      userInfo.innerText = "Login check failed: " + err.message;
+    if (sessionError) {
+      userInfo.innerText = "Session error: " + sessionError.message;
       return false;
     }
+
+    if (!sessionData.session) {
+      window.location.href = "login.html";
+      return false;
+    }
+
+    currentUser = sessionData.session.user;
+
+    const { data: profile, error: profileError } = await supabaseClient
+      .from("profiles")
+      .select("id, email, role, school_id")
+      .eq("id", currentUser.id)
+      .single();
+
+    if (profileError || !profile) {
+      userInfo.innerText = "Profile lookup error: " + (profileError?.message || "No profile found");
+      return false;
+    }
+
+    currentProfile = profile;
+    currentUserSchoolId = profile.school_id;
+
+    if (profile.role !== "school_admin" && profile.role !== "super_admin" && profile.role !== "superadmin") {
+      userInfo.innerText = "Access denied. Role is: " + profile.role;
+      return false;
+    }
+
+    if (!currentUserSchoolId && profile.role === "school_admin") {
+      userInfo.innerText = "No school assigned to this school admin account.";
+      return false;
+    }
+
+    userInfo.innerText =
+      "Logged in as: " + (profile.email || currentUser.email) +
+      " | Role: " + profile.role +
+      " | School ID: " + (currentUserSchoolId || "None");
+
+    return true;
   }
 
   async function loadSchoolName() {
@@ -215,7 +208,6 @@
 
     studentStatus.className = "small";
     studentStatus.innerText = "Loading students...";
-    tbody.innerHTML = "";
 
     let query = supabaseClient
       .from("students")
@@ -241,6 +233,7 @@
 
     if (safeStudents.length === 0) {
       studentStatus.innerText = "No students found.";
+      tbody.innerHTML = "";
       return [];
     }
 
@@ -263,14 +256,14 @@
   }
 
   async function loadScans() {
+    if (scansLoading) return [];
+    scansLoading = true;
+
     const scanStatus = document.getElementById("scanStatus");
     const tbody = document.getElementById("scanTableBody");
 
     scanStatus.className = "small";
-    scanStatus.innerText = "Loading scans...";
-    if (!tbody.innerHTML.trim()) {
-  tbody.innerHTML = "";
-}
+    scanStatus.innerText = "Refreshing scans...";
 
     let query = supabaseClient
       .from("scan_events")
@@ -281,6 +274,7 @@
         scanned_value,
         qr_value,
         result,
+        picked_up,
         created_at,
         scanned_at,
         students (
@@ -298,6 +292,8 @@
 
     const { data: scans, error } = await query;
 
+    scansLoading = false;
+
     if (error) {
       scanStatus.innerText = "Error loading scans: " + error.message;
       scanStatus.className = "error";
@@ -305,7 +301,6 @@
     }
 
     const safeScans = scans || [];
-
     const todayString = new Date().toDateString();
 
     const todayScans = safeScans.filter(scan => {
@@ -320,6 +315,7 @@
 
     if (safeScans.length === 0) {
       scanStatus.innerText = "No scans found yet.";
+      tbody.innerHTML = "";
       return [];
     }
 
@@ -340,6 +336,14 @@
 
       return `
         <tr>
+          <td>
+            <input
+              type="checkbox"
+              ${scan.picked_up ? "checked" : ""}
+              onchange="markPickedUp('${scan.id}', this.checked)"
+            />
+            ${scan.picked_up ? `<span class="badge picked-up">Done</span>` : ""}
+          </td>
           <td>${scanTime}</td>
           <td>${studentName}</td>
           <td>${grade}</td>
@@ -354,6 +358,21 @@
     }).join("");
 
     return safeScans;
+  }
+
+  async function markPickedUp(scanId, checked) {
+    const { error } = await supabaseClient
+      .from("scan_events")
+      .update({ picked_up: checked })
+      .eq("id", scanId);
+
+    if (error) {
+      alert("Could not update pickup status: " + error.message);
+      await loadScans();
+      return;
+    }
+
+    await loadScans();
   }
 
   async function loadDashboard() {
@@ -381,29 +400,18 @@
     window.location.href = "login.html";
   }
 
-  let scansRefreshTimer = null;
-let scansLoading = false;
+  async function init() {
+    const ok = await checkLogin();
+    if (!ok) return;
 
-async function refreshScansSafely() {
-  if (scansLoading) return;
+    await loadDashboard();
 
-  scansLoading = true;
-  await loadScans();
-  scansLoading = false;
-}
-
-async function init() {
-  const ok = await checkLogin();
-  if (!ok) return;
-
-  await loadDashboard();
-
-  if (!scansRefreshTimer) {
-    scansRefreshTimer = setInterval(refreshScansSafely, 15000);
+    if (!scansRefreshTimer) {
+      scansRefreshTimer = setInterval(loadScans, 15000);
+    }
   }
-}
 
-init();
+  init();
 </script>
 
 </body>
