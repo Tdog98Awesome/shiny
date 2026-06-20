@@ -163,6 +163,24 @@
         .eq("id", userId)
         .single();
 
+      // If this is a school admin, check whether their school is approved
+if (profile.role === "school_admin") {
+  const { data: school, error: schoolError } = await supabase
+    .from("schools")
+    .select("approved")
+    .eq("id", profile.school_id)
+    .single();
+
+  if (schoolError) throw schoolError;
+
+  if (school.approved === false) {
+    alert("Your school account is pending approval. PickUpPulse will contact you once your school is approved.");
+    await supabase.auth.signOut();
+    window.location.href = "login.html";
+    return;
+  }
+}
+
       if (profileError || !profile) {
         message.style.color = "red";
         message.innerText = "Login worked, but no profile/role was found.";
