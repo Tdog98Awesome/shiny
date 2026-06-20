@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>PickUpPulse - School Signup</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+body{
+    font-family: Arial, sans-serif;
+    background:#f4f7fb;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+    margin:0;
+}
+
+.container{
+    background:white;
+    padding:30px;
+    border-radius:12px;
+    box-shadow:0 0 15px rgba(0,0,0,.1);
+    width:400px;
+}
+
+h1{
+    text-align:center;
+    color:#1e88e5;
+}
+
+input{
+    width:100%;
+    padding:12px;
+    margin-top:10px;
+    border:1px solid #ccc;
+    border-radius:6px;
+    box-sizing:border-box;
+}
+
+button{
+    width:100%;
+    padding:12px;
+    margin-top:20px;
+    border:none;
+    background:#1e88e5;
+    color:white;
+    font-size:16px;
+    border-radius:6px;
+    cursor:pointer;
+}
+
+button:hover{
+    background:#1565c0;
+}
+
+#message{
+    margin-top:15px;
+    text-align:center;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<h1>School Signup</h1>
+
+<input type="text" id="school_name" placeholder="School Name">
+
+<input type="text" id="admin_name" placeholder="Administrator Name">
+
+<input type="email" id="email" placeholder="Email Address">
+
+<input type="text" id="phone" placeholder="Phone Number (Optional)">
+
+<input type="password" id="password" placeholder="Password">
+
+<input type="password" id="confirm_password" placeholder="Confirm Password">
+
+<button onclick="signup()">Create Account</button>
+
+<div id="message"></div>
+
+</div>
+
+<script>
+
+const SUPABASE_URL = "https://pthjwhhaupyswopadmsv.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0aGp3aGhhdXB5c3dvcGFkbXN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjgzMTcsImV4cCI6MjA5MTQ0NDMxN30.oSFyNIf3pr9_Nbc8vG4pr9OGU7ufUJgEpW6eQNCwtYs";
+
+const supabase = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+);
+
+async function signup(){
+
+    const schoolName = document.getElementById("school_name").value.trim();
+    const adminName = document.getElementById("admin_name").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const phone = document.getElementById("phone").value.trim();
+    const password = document.getElementById("password").value;
+    const confirmPassword = document.getElementById("confirm_password").value;
+
+    const msg = document.getElementById("message");
+
+    msg.innerHTML = "";
+
+    if(password !== confirmPassword){
+        msg.style.color = "red";
+        msg.innerHTML = "Passwords do not match.";
+        return;
+    }
+
+    try{
+
+        // Create Auth Account
+        const { data, error } = await supabase.auth.signUp({
+            email,
+            password
+        });
+
+        if(error) throw error;
+
+        const user = data.user;
+
+        // Create School Record
+        const { data: schoolData, error: schoolError } =
+        await supabase
+        .from("schools")
+        .insert({
+            name: schoolName
+        })
+        .select()
+        .single();
+
+        if(schoolError) throw schoolError;
+
+        // Create Profile
+        const { error: profileError } =
+        await supabase
+        .from("profiles")
+        .insert({
+            id: user.id,
+            email: email,
+            full_name: adminName,
+            role: "school_admin",
+            school_id: schoolData.id,
+            phone: phone
+        });
+
+        if(profileError) throw profileError;
+
+        msg.style.color = "green";
+        msg.innerHTML =
+        "Account created! Check your email to verify your account.";
+
+    }
+    catch(err){
+
+        msg.style.color = "red";
+        msg.innerHTML = err.message;
+
+        console.error(err);
+    }
+}
+</script>
+
+</body>
+</html>
