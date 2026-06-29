@@ -8,21 +8,40 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
-    body { margin: 0; font-family: Arial, sans-serif; background: #f1f5f9; color: #1e293b; }
-    header { background: #0f172a; color: white; padding: 18px 8%; display: flex; justify-content: space-between; align-items: center; }
-    .logo { font-size: 26px; font-weight: bold; color: #38bdf8; }
-    .container { padding: 25px 8%; max-width: 1200px; margin: auto; }
-    .card { background: white; padding: 22px; border-radius: 18px; box-shadow: 0 6px 18px rgba(0,0,0,0.08); margin-bottom: 24px; }
+    :root {
+      --navy: #0f172a;
+      --sky: #38bdf8;
+      --blue: #2563eb;
+      --green: #16a34a;
+      --red: #ef4444;
+      --orange: #f97316;
+      --slate: #475569;
+      --light: #f1f5f9;
+      --line: #e2e8f0;
+      --card: #ffffff;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Arial, sans-serif; background: var(--light); color: #1e293b; }
+    header { background: var(--navy); color: white; padding: 18px 8%; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .logo { font-size: 26px; font-weight: bold; color: var(--sky); }
+    .container { padding: 25px 8%; max-width: 1300px; margin: auto; }
+    .card { background: var(--card); padding: 22px; border-radius: 18px; box-shadow: 0 6px 18px rgba(0,0,0,0.08); margin-bottom: 24px; }
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; margin-bottom: 24px; }
+    .two-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px; }
     .stat { background: #e0f2fe; padding: 20px; border-radius: 14px; text-align: center; }
     .stat-number { font-size: 36px; font-weight: bold; color: #0369a1; }
-    .stat-label { color: #475569; margin-top: 6px; }
+    .stat-label { color: var(--slate); margin-top: 6px; }
     button { padding: 12px 16px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin: 5px; font-size: 15px; }
-    .logout-btn { background: #ef4444; color: white; }
-    .refresh-btn { background: #2563eb; color: white; }
-    .scanner-btn { background: #16a34a; color: white; }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+    .logout-btn { background: var(--red); color: white; }
+    .refresh-btn, .primary-btn { background: var(--blue); color: white; }
+    .scanner-btn, .save-btn { background: var(--green); color: white; }
+    .warning-btn { background: var(--orange); color: white; }
+    .ghost-btn { background: #e2e8f0; color: #0f172a; }
+    .danger-btn { background: #dc2626; color: white; }
     table { width: 100%; border-collapse: collapse; margin-top: 14px; }
-    th, td { padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: left; vertical-align: top; }
+    th, td { padding: 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
     th { background: #f8fafc; color: #334155; }
     .badge { padding: 5px 9px; border-radius: 999px; font-size: 13px; font-weight: bold; display: inline-block; }
     .matched { background: #dcfce7; color: #166534; }
@@ -30,10 +49,26 @@
     .active { background: #dcfce7; color: #166534; }
     .inactive { background: #fee2e2; color: #991b1b; }
     .picked-up { background: #dbeafe; color: #1d4ed8; }
+    .changed { background: #fef3c7; color: #92400e; }
+    .new { background: #dbeafe; color: #1d4ed8; }
     .small { color: #64748b; font-size: 14px; }
     .error { color: #991b1b; font-weight: bold; }
+    .success { color: #166534; font-weight: bold; }
     .table-wrap { overflow-x: auto; }
     input[type="checkbox"] { width: 22px; height: 22px; cursor: pointer; }
+    input, select, textarea { width: 100%; padding: 11px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 15px; margin-top: 6px; }
+    label { display: block; font-weight: bold; margin-top: 12px; }
+    .row-actions { white-space: nowrap; }
+    .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+    .search-box { max-width: 420px; }
+    .notice { background: #f8fafc; border: 1px solid var(--line); padding: 14px; border-radius: 12px; }
+    .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.7); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+    .modal { background: white; width: min(620px, 100%); border-radius: 18px; padding: 22px; box-shadow: 0 20px 60px rgba(0,0,0,0.35); max-height: 90vh; overflow-y: auto; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .close-x { background: #e2e8f0; color: #0f172a; padding: 8px 12px; }
+    .hidden { display: none; }
+    .csv-preview-area { max-height: 360px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; margin-top: 12px; }
+    code { background: #f1f5f9; padding: 2px 5px; border-radius: 5px; }
   </style>
 </head>
 
@@ -46,9 +81,7 @@
   </div>
 
   <div>
-    <button class="scanner-btn" onclick="window.open('cards.html', '_blank')">
-  Print Pickup Cards
-</button>
+    <button class="scanner-btn" onclick="window.open('cards.html', '_blank')">Print Pickup Cards</button>
     <button class="scanner-btn" onclick="window.location.href='scanner.html'">Open Scanner</button>
     <button class="logout-btn" onclick="logout()">Logout</button>
   </div>
@@ -59,7 +92,11 @@
   <div class="card">
     <h1 id="schoolName">Loading school...</h1>
     <p id="userInfo">Checking login...</p>
-    <button class="refresh-btn" onclick="loadDashboard()">Refresh Dashboard</button>
+    <div class="toolbar">
+      <button class="refresh-btn" onclick="loadDashboard()">Refresh Dashboard</button>
+      <button class="primary-btn" onclick="openStudentModal()">Add Student</button>
+      <button class="warning-btn" onclick="scrollToCsvTools()">Bulk CSV Upload</button>
+    </div>
     <p class="small">This dashboard only shows students and scans for the school assigned to this admin account.</p>
   </div>
 
@@ -68,15 +105,90 @@
       <div id="activeStudentCount" class="stat-number">0</div>
       <div class="stat-label">Active Students</div>
     </div>
-
+    <div class="stat">
+      <div id="inactiveStudentCount" class="stat-number">0</div>
+      <div class="stat-label">Inactive Students</div>
+    </div>
+    <div class="stat">
+      <div id="familyCount" class="stat-number">0</div>
+      <div class="stat-label">Family / QR Groups</div>
+    </div>
     <div class="stat">
       <div id="todayScanCount" class="stat-number">0</div>
       <div class="stat-label">Scans Today</div>
     </div>
-
     <div class="stat">
       <div id="matchedScanCount" class="stat-number">0</div>
       <div class="stat-label">Matched Scans Today</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Manage Students</h2>
+    <p id="studentStatus" class="small">Loading students...</p>
+
+    <div class="toolbar">
+      <input id="studentSearch" class="search-box" type="text" placeholder="Search by name, grade, student number, or QR value..." oninput="renderStudents()" />
+      <select id="studentFilter" style="max-width: 220px;" onchange="renderStudents()">
+        <option value="all">Show all students</option>
+        <option value="active">Active only</option>
+        <option value="inactive">Inactive only</option>
+      </select>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>Student #</th>
+            <th>Grade</th>
+            <th>QR / Family Code</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="studentTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" id="csvToolsCard">
+    <h2>Bulk Student Upload</h2>
+    <p class="small">Use this for first-time setup or large roster updates. For small changes, use Add/Edit Student above.</p>
+
+    <div class="two-col">
+      <div class="notice">
+        <h3>CSV Format</h3>
+        <p class="small">Required/expected headers:</p>
+        <p><code>student_number, first_name, last_name, grade, qr_value, active</code></p>
+        <p class="small">The dashboard automatically adds the correct <code>school_id</code> for the logged-in school admin.</p>
+        <button class="ghost-btn" onclick="downloadCsvTemplate()">Download CSV Template</button>
+      </div>
+
+      <div class="notice">
+        <h3>Upload CSV</h3>
+        <input id="csvFileInput" type="file" accept=".csv,text/csv" onchange="handleCsvSelected(event)" />
+        <p id="csvStatus" class="small">No CSV selected.</p>
+        <button id="confirmCsvBtn" class="save-btn" onclick="confirmCsvImport()" disabled>Confirm Import / Update Students</button>
+        <button class="ghost-btn" onclick="clearCsvPreview()">Clear Preview</button>
+      </div>
+    </div>
+
+    <div id="csvPreviewWrap" class="csv-preview-area hidden">
+      <table>
+        <thead>
+          <tr>
+            <th>Action</th>
+            <th>Student #</th>
+            <th>Student</th>
+            <th>Grade</th>
+            <th>QR Value</th>
+            <th>Active</th>
+          </tr>
+        </thead>
+        <tbody id="csvPreviewBody"></tbody>
+      </table>
     </div>
   </div>
 
@@ -101,36 +213,61 @@
     </div>
   </div>
 
-  <div class="card">
-    <h2>Students</h2>
-    <p id="studentStatus" class="small">Loading students...</p>
+</div>
 
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Student</th>
-            <th>Grade</th>
-            <th>QR Value</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody id="studentTableBody"></tbody>
-      </table>
+<div id="studentModalBackdrop" class="modal-backdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="studentModalTitle">Add Student</h2>
+      <button class="close-x" onclick="closeStudentModal()">X</button>
+    </div>
+
+    <input id="studentId" type="hidden" />
+
+    <label for="studentNumber">Student Number</label>
+    <input id="studentNumber" type="text" placeholder="Example: 12345" />
+
+    <label for="firstName">First Name</label>
+    <input id="firstName" type="text" placeholder="First name" />
+
+    <label for="lastName">Last Name</label>
+    <input id="lastName" type="text" placeholder="Last name" />
+
+    <label for="grade">Grade</label>
+    <input id="grade" type="text" placeholder="Example: 3" />
+
+    <label for="qrValue">QR / Family Pickup Code</label>
+    <input id="qrValue" type="text" placeholder="Example: RIE_035" />
+    <p class="small">Students with the same QR value will appear on the same family pickup card.</p>
+
+    <label for="activeStatus">Status</label>
+    <select id="activeStatus">
+      <option value="true">Active</option>
+      <option value="false">Inactive</option>
+    </select>
+
+    <div class="toolbar" style="margin-top: 18px;">
+      <button class="save-btn" onclick="saveStudent()">Save Student</button>
+      <button class="ghost-btn" onclick="closeStudentModal()">Cancel</button>
     </div>
   </div>
-
 </div>
 
 <script>
   const SUPABASE_URL = "https://pthjwhhaupyswopadmsv.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0aGp3aGhhdXB5c3dvcGFkbXN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjgzMTcsImV4cCI6MjA5MTQ0NDMxN30.oSFyNIf3pr9_Nbc8vG4pr9OGU7ufUJgEpW6eQNCwtYs";
 
+  // IMPORTANT:
+  // If you copy/paste your old anon key back in, keep the same format as your other working pages.
+  // The safest security comes from Supabase Row Level Security policies, not from hiding this anon key.
+
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   let currentUser = null;
   let currentProfile = null;
   let currentUserSchoolId = null;
+  let allStudents = [];
+  let csvRowsToImport = [];
   let scansLoading = false;
   let scansRefreshTimer = null;
 
@@ -207,14 +344,13 @@
 
   async function loadStudents() {
     const studentStatus = document.getElementById("studentStatus");
-    const tbody = document.getElementById("studentTableBody");
 
     studentStatus.className = "small";
     studentStatus.innerText = "Loading students...";
 
     let query = supabaseClient
       .from("students")
-      .select("id, first_name, last_name, grade, qr_value, active, school_id")
+      .select("id, school_id, student_number, first_name, last_name, grade, qr_value, active, created_at")
       .order("last_name", { ascending: true });
 
     if (currentUserSchoolId) {
@@ -229,22 +365,43 @@
       return [];
     }
 
-    const safeStudents = students || [];
+    allStudents = students || [];
 
-    document.getElementById("activeStudentCount").innerText =
-      safeStudents.filter(s => s.active).length;
+    document.getElementById("activeStudentCount").innerText = allStudents.filter(s => s.active).length;
+    document.getElementById("inactiveStudentCount").innerText = allStudents.filter(s => !s.active).length;
+    document.getElementById("familyCount").innerText = new Set(allStudents.filter(s => s.qr_value).map(s => s.qr_value)).size;
 
-    if (safeStudents.length === 0) {
-      studentStatus.innerText = "No students found.";
-      tbody.innerHTML = "";
-      return [];
+    studentStatus.innerText = allStudents.length === 0 ? "No students found." : allStudents.length + " students loaded.";
+    renderStudents();
+    return allStudents;
+  }
+
+  function renderStudents() {
+    const tbody = document.getElementById("studentTableBody");
+    const search = document.getElementById("studentSearch").value.toLowerCase().trim();
+    const filter = document.getElementById("studentFilter").value;
+
+    let rows = [...allStudents];
+
+    if (filter === "active") rows = rows.filter(s => s.active);
+    if (filter === "inactive") rows = rows.filter(s => !s.active);
+
+    if (search) {
+      rows = rows.filter(s => {
+        const haystack = [s.first_name, s.last_name, s.grade, s.qr_value, s.student_number].join(" ").toLowerCase();
+        return haystack.includes(search);
+      });
     }
 
-    studentStatus.innerText = safeStudents.length + " students loaded.";
+    if (rows.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" class="small">No matching students.</td></tr>`;
+      return;
+    }
 
-    tbody.innerHTML = safeStudents.map(student => `
+    tbody.innerHTML = rows.map(student => `
       <tr>
         <td>${escapeHtml(student.first_name || "")} ${escapeHtml(student.last_name || "")}</td>
+        <td>${escapeHtml(student.student_number || "")}</td>
         <td>${escapeHtml(student.grade || "")}</td>
         <td>${escapeHtml(student.qr_value || "")}</td>
         <td>
@@ -252,10 +409,316 @@
             ${student.active ? "Active" : "Inactive"}
           </span>
         </td>
+        <td class="row-actions">
+          <button class="primary-btn" onclick="openStudentModal('${student.id}')">Edit</button>
+          <button class="${student.active ? "danger-btn" : "scanner-btn"}" onclick="toggleStudentActive('${student.id}', ${student.active ? "false" : "true"})">
+            ${student.active ? "Deactivate" : "Reactivate"}
+          </button>
+        </td>
       </tr>
     `).join("");
+  }
 
-    return safeStudents;
+  function openStudentModal(studentId = null) {
+    document.getElementById("studentModalBackdrop").style.display = "flex";
+    document.getElementById("studentId").value = "";
+    document.getElementById("studentNumber").value = "";
+    document.getElementById("firstName").value = "";
+    document.getElementById("lastName").value = "";
+    document.getElementById("grade").value = "";
+    document.getElementById("qrValue").value = "";
+    document.getElementById("activeStatus").value = "true";
+
+    if (!studentId) {
+      document.getElementById("studentModalTitle").innerText = "Add Student";
+      return;
+    }
+
+    const student = allStudents.find(s => s.id === studentId);
+    if (!student) return;
+
+    document.getElementById("studentModalTitle").innerText = "Edit Student";
+    document.getElementById("studentId").value = student.id;
+    document.getElementById("studentNumber").value = student.student_number || "";
+    document.getElementById("firstName").value = student.first_name || "";
+    document.getElementById("lastName").value = student.last_name || "";
+    document.getElementById("grade").value = student.grade || "";
+    document.getElementById("qrValue").value = student.qr_value || "";
+    document.getElementById("activeStatus").value = student.active ? "true" : "false";
+  }
+
+  function closeStudentModal() {
+    document.getElementById("studentModalBackdrop").style.display = "none";
+  }
+
+  async function saveStudent() {
+    if (!currentUserSchoolId) {
+      alert("No school_id found for this admin account.");
+      return;
+    }
+
+    const studentId = document.getElementById("studentId").value;
+    const studentNumber = document.getElementById("studentNumber").value.trim();
+    const firstName = document.getElementById("firstName").value.trim();
+    const lastName = document.getElementById("lastName").value.trim();
+    const grade = document.getElementById("grade").value.trim();
+    const qrValue = document.getElementById("qrValue").value.trim();
+    const active = document.getElementById("activeStatus").value === "true";
+
+    if (!firstName || !lastName || !qrValue) {
+      alert("First name, last name, and QR / Family Pickup Code are required.");
+      return;
+    }
+
+    const payload = {
+      school_id: currentUserSchoolId,
+      student_number: studentNumber || null,
+      first_name: firstName,
+      last_name: lastName,
+      grade: grade || null,
+      qr_value: qrValue,
+      active: active
+    };
+
+    let result;
+    if (studentId) {
+      result = await supabaseClient
+        .from("students")
+        .update(payload)
+        .eq("id", studentId)
+        .eq("school_id", currentUserSchoolId);
+    } else {
+      result = await supabaseClient
+        .from("students")
+        .insert(payload);
+    }
+
+    if (result.error) {
+      alert("Could not save student: " + result.error.message);
+      return;
+    }
+
+    closeStudentModal();
+    await loadStudents();
+  }
+
+  async function toggleStudentActive(studentId, newActiveValue) {
+    const { error } = await supabaseClient
+      .from("students")
+      .update({ active: newActiveValue })
+      .eq("id", studentId)
+      .eq("school_id", currentUserSchoolId);
+
+    if (error) {
+      alert("Could not update student: " + error.message);
+      return;
+    }
+
+    await loadStudents();
+  }
+
+  function scrollToCsvTools() {
+    document.getElementById("csvToolsCard").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function downloadCsvTemplate() {
+    const csv = "student_number,first_name,last_name,grade,qr_value,active\n1001,Jane,Smith,3,RIE_035,true\n1002,John,Smith,5,RIE_035,true\n";
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "pickuppulse-student-template.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function handleCsvSelected(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const rows = parseCsv(e.target.result);
+        prepareCsvPreview(rows);
+      } catch (err) {
+        document.getElementById("csvStatus").innerText = "CSV error: " + err.message;
+        document.getElementById("csvStatus").className = "error";
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function parseCsv(text) {
+    const rows = [];
+    let current = "";
+    let row = [];
+    let inQuotes = false;
+
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      const next = text[i + 1];
+
+      if (char === '"' && inQuotes && next === '"') {
+        current += '"';
+        i++;
+      } else if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        row.push(current);
+        current = "";
+      } else if ((char === '\n' || char === '\r') && !inQuotes) {
+        if (char === '\r' && next === '\n') i++;
+        row.push(current);
+        if (row.some(cell => cell.trim() !== "")) rows.push(row);
+        row = [];
+        current = "";
+      } else {
+        current += char;
+      }
+    }
+
+    row.push(current);
+    if (row.some(cell => cell.trim() !== "")) rows.push(row);
+    if (rows.length < 2) throw new Error("CSV must include a header row and at least one student row.");
+
+    const headers = rows[0].map(h => h.trim().toLowerCase());
+    return rows.slice(1).map(values => {
+      const obj = {};
+      headers.forEach((header, index) => obj[header] = (values[index] || "").trim());
+      return obj;
+    });
+  }
+
+  function prepareCsvPreview(rows) {
+    const required = ["first_name", "last_name", "qr_value"];
+    const missingRequired = required.filter(key => !Object.keys(rows[0] || {}).includes(key));
+    if (missingRequired.length) {
+      throw new Error("Missing required header(s): " + missingRequired.join(", "));
+    }
+
+    csvRowsToImport = rows.map(row => {
+      const studentNumber = row.student_number || "";
+      const existing = allStudents.find(s =>
+        studentNumber && String(s.student_number || "").trim() === String(studentNumber).trim()
+      );
+
+      return {
+        id: existing?.id || null,
+        school_id: currentUserSchoolId,
+        student_number: studentNumber || null,
+        first_name: row.first_name || "",
+        last_name: row.last_name || "",
+        grade: row.grade || null,
+        qr_value: row.qr_value || "",
+        active: normalizeBoolean(row.active, true),
+        _action: existing ? "Update" : "New"
+      };
+    });
+
+    const invalidRows = csvRowsToImport.filter(r => !r.first_name || !r.last_name || !r.qr_value);
+    if (invalidRows.length) {
+      throw new Error("Every row needs first_name, last_name, and qr_value.");
+    }
+
+    renderCsvPreview();
+    document.getElementById("csvStatus").innerText = csvRowsToImport.length + " rows ready to import. Review the preview, then click Confirm Import / Update Students.";
+    document.getElementById("csvStatus").className = "success";
+    document.getElementById("confirmCsvBtn").disabled = false;
+  }
+
+  function renderCsvPreview() {
+    const wrap = document.getElementById("csvPreviewWrap");
+    const tbody = document.getElementById("csvPreviewBody");
+
+    wrap.classList.remove("hidden");
+    tbody.innerHTML = csvRowsToImport.map(row => `
+      <tr>
+        <td><span class="badge ${row._action === "New" ? "new" : "changed"}">${row._action}</span></td>
+        <td>${escapeHtml(row.student_number || "")}</td>
+        <td>${escapeHtml(row.first_name)} ${escapeHtml(row.last_name)}</td>
+        <td>${escapeHtml(row.grade || "")}</td>
+        <td>${escapeHtml(row.qr_value)}</td>
+        <td>${row.active ? "true" : "false"}</td>
+      </tr>
+    `).join("");
+  }
+
+  async function confirmCsvImport() {
+    if (!csvRowsToImport.length) return;
+
+    if (!currentUserSchoolId) {
+      alert("No school_id found for this admin account.");
+      return;
+    }
+
+    const confirmMessage = "Import/update " + csvRowsToImport.length + " student rows for this school?";
+    if (!confirm(confirmMessage)) return;
+
+    const updates = csvRowsToImport.filter(r => r.id).map(stripPrivateFields);
+    const inserts = csvRowsToImport.filter(r => !r.id).map(row => {
+      const clean = stripPrivateFields(row);
+      delete clean.id;
+      return clean;
+    });
+
+    let updateErrors = [];
+
+    for (const row of updates) {
+      const rowId = row.id;
+      const payload = { ...row };
+      delete payload.id;
+
+      const { error } = await supabaseClient
+        .from("students")
+        .update(payload)
+        .eq("id", rowId)
+        .eq("school_id", currentUserSchoolId);
+
+      if (error) updateErrors.push(error.message);
+    }
+
+    let insertError = null;
+    if (inserts.length) {
+      const { error } = await supabaseClient.from("students").insert(inserts);
+      insertError = error;
+    }
+
+    if (updateErrors.length || insertError) {
+      alert("Some CSV rows failed. " + [...updateErrors, insertError?.message].filter(Boolean).join(" | "));
+      return;
+    }
+
+    document.getElementById("csvStatus").innerText = "CSV import complete.";
+    document.getElementById("csvStatus").className = "success";
+    clearCsvPreview(false);
+    await loadStudents();
+  }
+
+  function stripPrivateFields(row) {
+    const clean = { ...row };
+    delete clean._action;
+    return clean;
+  }
+
+  function clearCsvPreview(clearStatus = true) {
+    csvRowsToImport = [];
+    document.getElementById("csvFileInput").value = "";
+    document.getElementById("csvPreviewBody").innerHTML = "";
+    document.getElementById("csvPreviewWrap").classList.add("hidden");
+    document.getElementById("confirmCsvBtn").disabled = true;
+    if (clearStatus) {
+      document.getElementById("csvStatus").innerText = "No CSV selected.";
+      document.getElementById("csvStatus").className = "small";
+    }
+  }
+
+  function normalizeBoolean(value, defaultValue = true) {
+    if (value === undefined || value === null || String(value).trim() === "") return defaultValue;
+    const v = String(value).trim().toLowerCase();
+    return ["true", "yes", "y", "1", "active"].includes(v);
   }
 
   async function loadScans() {
@@ -294,7 +757,6 @@
     }
 
     const { data: scans, error } = await query;
-
     scansLoading = false;
 
     if (error) {
@@ -313,8 +775,7 @@
     });
 
     document.getElementById("todayScanCount").innerText = todayScans.length;
-    document.getElementById("matchedScanCount").innerText =
-      todayScans.filter(scan => scan.result === "matched").length;
+    document.getElementById("matchedScanCount").innerText = todayScans.filter(scan => scan.result === "matched").length;
 
     if (safeScans.length === 0) {
       scanStatus.innerText = "No scans found yet.";
@@ -326,7 +787,6 @@
 
     tbody.innerHTML = safeScans.map(scan => {
       const student = scan.students;
-
       const studentName = student
         ? `${escapeHtml(student.first_name || "")} ${escapeHtml(student.last_name || "")}`
         : "No student match";
@@ -351,11 +811,7 @@
           <td>${studentName}</td>
           <td>${grade}</td>
           <td>${scannedValue}</td>
-          <td>
-            <span class="badge ${resultClass}">
-              ${escapeHtml(result)}
-            </span>
-          </td>
+          <td><span class="badge ${resultClass}">${escapeHtml(result)}</span></td>
         </tr>
       `;
     }).join("");
