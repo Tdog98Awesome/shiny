@@ -81,7 +81,7 @@
   </div>
 
   <div>
-    <button class="scanner-btn" onclick="window.open('cards.html', '_blank')">Print Pickup Cards</button>
+    <button class="scanner-btn" onclick="generatePickupCards()">Print Pickup Cards</button>
     <button class="scanner-btn" onclick="window.location.href='scanner.html'">Open Scanner</button>
     <button class="logout-btn" onclick="logout()">Logout</button>
   </div>
@@ -260,6 +260,8 @@
   // IMPORTANT:
   // If you copy/paste your old anon key back in, keep the same format as your other working pages.
   // The safest security comes from Supabase Row Level Security policies, not from hiding this anon key.
+
+  const GENERATE_CARDS_URL = "https://pickuppulse-card-generator.onrender.com";
 
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -852,6 +854,51 @@
       .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;");
+  }
+
+
+  async function generatePickupCards() {
+    const { data: { session }, error } = await supabaseClient.auth.getSession();
+
+    if (error || !session) {
+      alert("You must be logged in to generate pickup cards.");
+      window.location.href = "login.html";
+      return;
+    }
+
+    const cardButton = document.querySelector("button[onclick='generatePickupCards()']");
+    const originalText = cardButton ? cardButton.innerText : "";
+
+    if (cardButton) {
+      cardButton.disabled = true;
+      cardButton.innerText = "Generating Cards...";
+    }
+
+    try {
+      const response = await fetch(GENERATE_CARDS_URL, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${session.access_token}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        alert("Could not generate cards: " + errorText);
+        return;
+      }
+
+      const blob = await response.blob();
+      const fileUrl = URL.createObjectURL(blob);
+      window.open(fileUrl, "_blank");
+    } catch (err) {
+      alert("Card generator error: " + err.message);
+    } finally {
+      if (cardButton) {
+        cardButton.disabled = false;
+        cardButton.innerText = originalText;
+      }
+    }
   }
 
   async function logout() {
