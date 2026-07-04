@@ -195,7 +195,11 @@
   <div class="card">
     <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
       <h2 style="margin:0;">Recent Pickup Scans</h2>
-      <button class="refresh-btn" onclick="loadScans()">Refresh Scans</button>
+      <div class="toolbar" style="margin-top:0;">
+        <button class="refresh-btn" onclick="loadScans()">Refresh Scans</button>
+        <button class="primary-btn" onclick="exportPickupScansCsv()">Export CSV</button>
+        <button class="danger-btn" onclick="clearScanHistory()">Clear Scan History</button>
+      </div>
     </div>
     <p id="scanStatus" class="small">Loading scans...</p>
 
@@ -275,6 +279,7 @@
   let csvRowsToImport = [];
   let scansLoading = false;
   let scansRefreshTimer = null;
+  let latestScans = [];
 
   async function checkLogin() {
     const userInfo = document.getElementById("userInfo");
@@ -766,6 +771,7 @@
     }
 
     const safeScans = scans || [];
+    latestScans = safeScans;
     const todayString = new Date().toDateString();
 
     const todayScans = safeScans.filter(scan => {
@@ -855,6 +861,96 @@
       const grade = student.grade ? escapeHtml(student.grade) : "-";
       return `<div>${grade}</div>`;
     }).join("");
+  }
+
+  function getPlainLinkedStudentNames(students) {
+    if (!students.length) return "No student match";
+
+    return students.map(student => {
+      const fullName = `${student.first_name || ""} ${student.last_name || ""}`.trim();
+      const grade = student.grade ? `Grade ${student.grade}` : "Grade -";
+      return `${fullName || "Unnamed student"} (${grade})`;
+    }).join("; ");
+  }
+
+  function csvEscape(value) {
+    const text = String(value ?? "");
+    return `"${text.replaceAll('"', '""')}"`;
+  }
+
+  function exportPickupScansCsv() {
+    if (!latestScans.length) {
+      alert("There are no recent scans to export. Click Refresh Scans first if needed.");
+      return;
+    }
+
+    const headers = [
+      "picked_up",
+      "time",
+      "students",
+      "scanned_value",
+      "result"
+    ];
+
+    const rows = latestScans.map(scan => {
+      const scannedRawValue = scan.qr_value || scan.scanned_value || "";
+      const linkedStudents = getStudentsForScannedValue(scannedRawValue, scan.school_id);
+
+      return [
+        scan.picked_up ? "yes" : "no",
+        formatDateTime(scan.created_at || scan.scanned_at),
+        getPlainLinkedStudentNames(linkedStudents),
+        scannedRawValue,
+        scan.result || "unknown"
+      ];
+    });
+
+    const csv = [
+      headers.map(csvEscape).join(","),
+      ...rows.map(row => row.map(csvEscape).join(","))
+    ].join("\n");
+
+    const today = new Date().toISOString().slice(0, 10);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `pickuppulse-recent-scans-${today}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  async function clearScanHistory() {
+    if (!currentUserSchoolId) {
+      alert("No school_id found for this admin account, so scan history was not cleared.");
+      return;
+    }
+
+    const confirmed = confirm(
+      "Are you sure you want to clear this school's scan history?\n\n" +
+      "This will permanently delete the recent pickup scan records for this school from Supabase. Student records will not be deleted."
+    );
+
+    if (!confirmed) return;
+
+    const { error } = await supabaseClient
+      .from("scan_events")
+      .delete()
+      .eq("school_id", currentUserSchoolId);
+
+    if (error) {
+      alert("Could not clear scan history: " + error.message);
+      return;
+    }
+
+    latestScans = [];
+    document.getElementById("todayScanCount").innerText = "0";
+    document.getElementById("matchedScanCount").innerText = "0";
+    document.getElementById("scanTableBody").innerHTML = "";
+    document.getElementById("scanStatus").className = "success";
+    document.getElementById("scanStatus").innerText = "Scan history cleared for this school.";
   }
 
   async function markPickedUp(scanId, checked) {
