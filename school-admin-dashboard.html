@@ -930,27 +930,93 @@
 
     const confirmed = confirm(
       "Are you sure you want to clear this school's scan history?\n\n" +
-      "This will permanently delete the recent pickup scan records for this school from Supabase. Student records will not be deleted."
+      "This will permanently delete ALL pickup scan records for this school from Supabase. Student records will not be deleted."
     );
 
     if (!confirmed) return;
 
-    const { error } = await supabaseClient
-      .from("scan_events")
-      .delete()
-      .eq("school_id", currentUserSchoolId);
+    const scanStatus = document.getElementById("scanStatus");
+    const tbody = document.getElementById("scanTableBody");
 
-    if (error) {
-      alert("Could not clear scan history: " + error.message);
+    scanStatus.className = "small";
+    scanStatus.innerText = "Clearing scan history...";
+
+    // First collect the exact rows this school admin is allowed to see/delete.
+    // This avoids a silent-looking delete where Supabase RLS blocks rows but returns no visible error.
+    const { data: rowsToDelete, error: lookupError } = await supabaseClient
+      .from("scan_events")
+      .select("id")
+      .eq("school_id", currentUserSchoolId)
+      .limit(10000);
+
+    if (lookupError) {
+      alert("Could not look up scan history to clear: " + lookupError.message);
+      scanStatus.className = "error";
+      scanStatus.innerText = "Could not clear scan history.";
+      return;
+    }
+
+    const idsToDelete = (rowsToDelete || []).map(row => row.id).filter(Boolean);
+
+    if (idsToDelete.length === 0) {
+      latestScans = [];
+      document.getElementById("todayScanCount").innerText = "0";
+      document.getElementById("matchedScanCount").innerText = "0";
+      tbody.innerHTML = "";
+      scanStatus.className = "success";
+      scanStatus.innerText = "No scan history found for this school.";
+      return;
+    }
+
+    // Delete by explicit IDs, in chunks, so every visible scan row is targeted.
+    for (let i = 0; i < idsToDelete.length; i += 500) {
+      const chunk = idsToDelete.slice(i, i + 500);
+
+      const { error: deleteError } = await supabaseClient
+        .from("scan_events")
+        .delete()
+        .in("id", chunk)
+        .eq("school_id", currentUserSchoolId);
+
+      if (deleteError) {
+        alert("Could not clear scan history: " + deleteError.message);
+        scanStatus.className = "error";
+        scanStatus.innerText = "Could not clear scan history.";
+        await loadScans();
+        return;
+      }
+    }
+
+    // Verify the delete actually worked. If rows remain, the usual cause is a missing Supabase DELETE RLS policy.
+    const { data: remainingRows, error: verifyError } = await supabaseClient
+      .from("scan_events")
+      .select("id")
+      .eq("school_id", currentUserSchoolId)
+      .limit(1);
+
+    if (verifyError) {
+      alert("Scan history delete was attempted, but verification failed: " + verifyError.message);
+      await loadScans();
+      return;
+    }
+
+    if (remainingRows && remainingRows.length > 0) {
+      scanStatus.className = "error";
+      scanStatus.innerText = "Scan history could not be fully cleared. Check the Supabase DELETE policy for scan_events.";
+      alert(
+        "The dashboard tried to delete the scan records, but Supabase still returned scan rows afterward.\n\n" +
+        "Most likely cause: your Row Level Security policy allows SELECT on scan_events but does not allow DELETE for school_admin users."
+      );
+      await loadScans();
       return;
     }
 
     latestScans = [];
     document.getElementById("todayScanCount").innerText = "0";
     document.getElementById("matchedScanCount").innerText = "0";
-    document.getElementById("scanTableBody").innerHTML = "";
-    document.getElementById("scanStatus").className = "success";
-    document.getElementById("scanStatus").innerText = "Scan history cleared for this school.";
+    tbody.innerHTML = "";
+    scanStatus.className = "success";
+    scanStatus.innerText = "Scan history cleared for this school.";
   }
 
   async function markPickedUp(scanId, checked) {
