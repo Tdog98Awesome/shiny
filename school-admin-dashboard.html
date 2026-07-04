@@ -193,7 +193,10 @@
   </div>
 
   <div class="card">
-    <h2>Recent Pickup Scans</h2>
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+      <h2 style="margin:0;">Recent Pickup Scans</h2>
+      <button class="refresh-btn" onclick="loadScans()">Refresh Scans</button>
+    </div>
     <p id="scanStatus" class="small">Loading scans...</p>
 
     <div class="table-wrap">
@@ -744,12 +747,7 @@
         result,
         picked_up,
         created_at,
-        scanned_at,
-        students (
-          first_name,
-          last_name,
-          grade
-        )
+        scanned_at
       `)
       .order("created_at", { ascending: false })
       .limit(50);
@@ -788,14 +786,12 @@
     scanStatus.innerText = "Showing latest " + safeScans.length + " scans.";
 
     tbody.innerHTML = safeScans.map(scan => {
-      const student = scan.students;
-      const studentName = student
-        ? `${escapeHtml(student.first_name || "")} ${escapeHtml(student.last_name || "")}`
-        : "No student match";
-
-      const grade = student ? escapeHtml(student.grade || "") : "-";
+      const scannedRawValue = scan.qr_value || scan.scanned_value || "";
+      const linkedStudents = getStudentsForScannedValue(scannedRawValue, scan.school_id);
+      const studentName = formatLinkedStudentNames(linkedStudents);
+      const grade = formatLinkedStudentGrades(linkedStudents);
       const scanTime = formatDateTime(scan.created_at || scan.scanned_at);
-      const scannedValue = escapeHtml(scan.scanned_value || scan.qr_value || "");
+      const scannedValue = escapeHtml(scannedRawValue);
       const result = scan.result || "unknown";
       const resultClass = result === "matched" ? "matched" : result === "not_found" ? "not_found" : "unknown";
 
@@ -819,6 +815,46 @@
     }).join("");
 
     return safeScans;
+  }
+
+  function normalizeQrValue(value) {
+    return String(value || "").trim().toLowerCase();
+  }
+
+  function getStudentsForScannedValue(scannedValue, schoolId) {
+    const normalizedScannedValue = normalizeQrValue(scannedValue);
+
+    if (!normalizedScannedValue) return [];
+
+    return allStudents
+      .filter(student => {
+        const sameQrValue = normalizeQrValue(student.qr_value) === normalizedScannedValue;
+        const sameSchool = !schoolId || String(student.school_id) === String(schoolId);
+        return sameQrValue && sameSchool && student.active;
+      })
+      .sort((a, b) => {
+        const lastCompare = String(a.last_name || "").localeCompare(String(b.last_name || ""));
+        if (lastCompare !== 0) return lastCompare;
+        return String(a.first_name || "").localeCompare(String(b.first_name || ""));
+      });
+  }
+
+  function formatLinkedStudentNames(students) {
+    if (!students.length) return "No student match";
+
+    return students.map(student => {
+      const fullName = `${escapeHtml(student.first_name || "")} ${escapeHtml(student.last_name || "")}`.trim();
+      return `<div>${fullName || "Unnamed student"}</div>`;
+    }).join("");
+  }
+
+  function formatLinkedStudentGrades(students) {
+    if (!students.length) return "-";
+
+    return students.map(student => {
+      const grade = student.grade ? escapeHtml(student.grade) : "-";
+      return `<div>${grade}</div>`;
+    }).join("");
   }
 
   async function markPickedUp(scanId, checked) {
