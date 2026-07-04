@@ -890,7 +890,15 @@
 
       const blob = await response.blob();
       const fileUrl = URL.createObjectURL(blob);
-      window.open(fileUrl, "_blank");
+
+      const a = document.createElement("a");
+      a.href = fileUrl;
+      a.download = "pickup_cards.pdf";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      URL.revokeObjectURL(fileUrl);
     } catch (err) {
       alert("Card generator error: " + err.message);
     } finally {
