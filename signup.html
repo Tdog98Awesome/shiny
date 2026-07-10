@@ -1,175 +1,389 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
 
-<title>PickUpPulse - School Signup</title>
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <title>PickUpPulse - School Signup</title>
 
-<style>
-body{
-    font-family: Arial, sans-serif;
-    background:#f4f7fb;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    min-height:100vh;
-    margin:0;
-}
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-.container{
-    background:white;
-    padding:30px;
-    border-radius:12px;
-    box-shadow:0 0 15px rgba(0,0,0,.1);
-    width:400px;
-}
+    <style>
+        * {
+            box-sizing: border-box;
+        }
 
-h1{
-    text-align:center;
-    color:#1e88e5;
-}
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            color: #1f2937;
+        }
 
-input{
-    width:100%;
-    padding:12px;
-    margin-top:10px;
-    border:1px solid #ccc;
-    border-radius:6px;
-    box-sizing:border-box;
-}
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 420px;
+        }
 
-button{
-    width:100%;
-    padding:12px;
-    margin-top:20px;
-    border:none;
-    background:#1e88e5;
-    color:white;
-    font-size:16px;
-    border-radius:6px;
-    cursor:pointer;
-}
+        h1 {
+            text-align: center;
+            color: #1e88e5;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
 
-button:hover{
-    background:#1565c0;
-}
+        .subtitle {
+            text-align: center;
+            color: #64748b;
+            margin-top: 0;
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
 
-#message{
-    margin-top:15px;
-    text-align:center;
-}
-</style>
+        label {
+            display: block;
+            margin-top: 14px;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+
+        input:focus {
+            border-color: #1e88e5;
+            outline: 2px solid rgba(30, 136, 229, 0.15);
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 22px;
+            border: none;
+            background: #1e88e5;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        button:hover:not(:disabled) {
+            background: #1565c0;
+        }
+
+        button:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        #message {
+            display: none;
+            margin-top: 18px;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        #message.success {
+            display: block;
+            color: #166534;
+            background: #dcfce7;
+            border: 1px solid #86efac;
+        }
+
+        #message.error {
+            display: block;
+            color: #991b1b;
+            background: #fee2e2;
+            border: 1px solid #fca5a5;
+        }
+
+        #message.info {
+            display: block;
+            color: #1e3a8a;
+            background: #dbeafe;
+            border: 1px solid #93c5fd;
+        }
+
+        .login-link {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .login-link a {
+            color: #1e88e5;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .login-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
+
 <body>
 
 <div class="container">
 
-<h1>School Signup</h1>
+    <h1>School Signup</h1>
 
-<input type="text" id="school_name" placeholder="School Name">
+    <p class="subtitle">
+        Register your school for a PickUpPulse account.
+        New schools must be approved before they can use the system.
+    </p>
 
-<input type="text" id="admin_name" placeholder="Administrator Name">
+    <form id="signupForm">
 
-<input type="email" id="email" placeholder="Email Address">
+        <label for="school_name">School name</label>
+        <input
+            type="text"
+            id="school_name"
+            name="school_name"
+            placeholder="Example Elementary School"
+            autocomplete="organization"
+            required
+        >
 
-<input type="text" id="phone" placeholder="Phone Number (Optional)">
+        <label for="admin_name">Administrator name</label>
+        <input
+            type="text"
+            id="admin_name"
+            name="admin_name"
+            placeholder="First and last name"
+            autocomplete="name"
+            required
+        >
 
-<input type="password" id="password" placeholder="Password">
+        <label for="email">Email address</label>
+        <input
+            type="email"
+            id="email"
+            name="email"
+            placeholder="administrator@school.org"
+            autocomplete="email"
+            required
+        >
 
-<input type="password" id="confirm_password" placeholder="Confirm Password">
+        <label for="phone">Phone number</label>
+        <input
+            type="tel"
+            id="phone"
+            name="phone"
+            placeholder="Optional"
+            autocomplete="tel"
+        >
 
-<button onclick="signup()">Create Account</button>
+        <label for="password">Password</label>
+        <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="At least 8 characters"
+            autocomplete="new-password"
+            minlength="8"
+            required
+        >
 
-<div id="message"></div>
+        <label for="confirm_password">Confirm password</label>
+        <input
+            type="password"
+            id="confirm_password"
+            name="confirm_password"
+            placeholder="Re-enter your password"
+            autocomplete="new-password"
+            minlength="8"
+            required
+        >
+
+        <button type="submit" id="signupButton">
+            Create Account
+        </button>
+
+    </form>
+
+    <div id="message" role="alert" aria-live="polite"></div>
+
+    <div class="login-link">
+        Already registered?
+        <a href="login.html">Return to login</a>
+    </div>
 
 </div>
 
 <script>
+    const SUPABASE_URL =
+        "https://pthjwhhaupyswopadmsv.supabase.co";
 
-const SUPABASE_URL = "https://pthjwhhaupyswopadmsv.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0aGp3aGhhdXB5c3dvcGFkbXN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjgzMTcsImV4cCI6MjA5MTQ0NDMxN30.oSFyNIf3pr9_Nbc8vG4pr9OGU7ufUJgEpW6eQNCwtYs";
+    const SUPABASE_ANON_KEY =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0aGp3aGhhdXB5c3dvcGFkbXN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjgzMTcsImV4cCI6MjA5MTQ0NDMxN30.oSFyNIf3pr9_Nbc8vG4pr9OGU7ufUJgEpW6eQNCwtYs";
 
-const supabase = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
-);
+    const supabaseClient = window.supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_ANON_KEY
+    );
 
-async function signup(){
+    const signupForm = document.getElementById("signupForm");
+    const signupButton = document.getElementById("signupButton");
+    const messageBox = document.getElementById("message");
 
-    const schoolName = document.getElementById("school_name").value.trim();
-    const adminName = document.getElementById("admin_name").value.trim();
-    const email = document.getElementById("email").value.trim();
-    const phone = document.getElementById("phone").value.trim();
-    const password = document.getElementById("password").value;
-    const confirmPassword = document.getElementById("confirm_password").value;
-
-    const msg = document.getElementById("message");
-
-    msg.innerHTML = "";
-
-    if(password !== confirmPassword){
-        msg.style.color = "red";
-        msg.innerHTML = "Passwords do not match.";
-        return;
+    function showMessage(text, type) {
+        messageBox.textContent = text;
+        messageBox.className = type;
     }
 
-    try{
-
-        // Create Auth Account
-        const { data, error } = await supabase.auth.signUp({
-            email,
-            password
-        });
-
-        if(error) throw error;
-
-        const user = data.user;
-
-        // Create School Record (Pending Approval)
-const { data: schoolData, error: schoolError } =
-await supabase
-.from("schools")
-.insert({
-    name: schoolName,
-    approved: false
-})
-.select()
-.single();
-
-if (schoolError) throw schoolError;
-
-        // Create Profile
-        const { error: profileError } =
-        await supabase
-        .from("profiles")
-        .insert({
-            id: user.id,
-            email: email,
-            full_name: adminName,
-            role: "school_admin",
-            school_id: schoolData.id,
-            phone: phone
-        });
-
-        if(profileError) throw profileError;
-
-        msg.style.color = "green";
-        msg.innerHTML =
-"Account created! Check your email to verify your account. Your school will remain pending until approved by PickUpPulse.";
-
+    function clearMessage() {
+        messageBox.textContent = "";
+        messageBox.className = "";
+        messageBox.style.display = "none";
     }
-    catch(err){
 
-        msg.style.color = "red";
-        msg.innerHTML = err.message;
+    signupForm.addEventListener("submit", async function(event) {
+        event.preventDefault();
 
-        console.error(err);
-    }
-}
+        clearMessage();
+
+        const schoolName =
+            document.getElementById("school_name").value.trim();
+
+        const adminName =
+            document.getElementById("admin_name").value.trim();
+
+        const email =
+            document.getElementById("email").value.trim().toLowerCase();
+
+        const phone =
+            document.getElementById("phone").value.trim();
+
+        const password =
+            document.getElementById("password").value;
+
+        const confirmPassword =
+            document.getElementById("confirm_password").value;
+
+        if (!schoolName) {
+            showMessage("Please enter the school name.", "error");
+            return;
+        }
+
+        if (!adminName) {
+            showMessage("Please enter the administrator name.", "error");
+            return;
+        }
+
+        if (!email) {
+            showMessage("Please enter an email address.", "error");
+            return;
+        }
+
+        if (password.length < 8) {
+            showMessage(
+                "Your password must contain at least 8 characters.",
+                "error"
+            );
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            showMessage("Passwords do not match.", "error");
+            return;
+        }
+
+        signupButton.disabled = true;
+        signupButton.textContent = "Creating Account...";
+
+        showMessage(
+            "Creating your account and school registration...",
+            "info"
+        );
+
+        try {
+            const emailRedirectUrl =
+                window.location.origin + "/login.html";
+
+            const { data, error } =
+                await supabaseClient.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        emailRedirectTo: emailRedirectUrl,
+
+                        data: {
+                            signup_type: "school_registration",
+                            school_name: schoolName,
+                            admin_name: adminName,
+                            phone: phone
+                        }
+                    }
+                });
+
+            if (error) {
+                throw error;
+            }
+
+            if (!data || !data.user) {
+                throw new Error(
+                    "Supabase did not return a new user account."
+                );
+            }
+
+            signupForm.reset();
+
+            showMessage(
+                "Account created successfully. Please check your email " +
+                "and click the verification link. Your school will remain " +
+                "pending until it is approved by PickUpPulse.",
+                "success"
+            );
+
+            signupButton.textContent = "Account Created";
+        }
+        catch (error) {
+            console.error("School signup error:", error);
+
+            let errorMessage =
+                error?.message ||
+                "The account could not be created. Please try again.";
+
+            if (
+                errorMessage.toLowerCase().includes("already registered") ||
+                errorMessage.toLowerCase().includes("already exists")
+            ) {
+                errorMessage =
+                    "An account already exists for this email address.";
+            }
+
+            showMessage(errorMessage, "error");
+
+            signupButton.disabled = false;
+            signupButton.textContent = "Create Account";
+        }
+    });
 </script>
 
 </body>
 </html>
+```
