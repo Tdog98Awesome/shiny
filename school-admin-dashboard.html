@@ -69,6 +69,35 @@
     .hidden { display: none; }
     .csv-preview-area { max-height: 360px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; margin-top: 12px; }
     code { background: #f1f5f9; padding: 2px 5px; border-radius: 5px; }
+
+    .logo-upload-layout {
+      display: grid;
+      grid-template-columns: minmax(220px, 320px) 1fr;
+      gap: 24px;
+      align-items: center;
+    }
+    .school-logo-preview-box {
+      min-height: 180px;
+      border: 2px dashed #cbd5e1;
+      border-radius: 14px;
+      background: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      text-align: center;
+    }
+    .school-logo-preview {
+      display: none;
+      max-width: 100%;
+      max-height: 150px;
+      object-fit: contain;
+    }
+    .logo-placeholder { color: #64748b; }
+    .file-details { margin-top: 8px; color: #64748b; font-size: 13px; }
+    @media (max-width: 720px) {
+      .logo-upload-layout { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 
@@ -96,6 +125,7 @@
       <button class="refresh-btn" onclick="loadDashboard()">Refresh Dashboard</button>
       <button class="primary-btn" onclick="openStudentModal()">Add Student</button>
       <button class="warning-btn" onclick="scrollToCsvTools()">Bulk CSV Upload</button>
+      <button class="ghost-btn" onclick="scrollToLogoTools()">School Logo</button>
     </div>
     <p class="small">This dashboard only shows students and scans for the school assigned to this admin account.</p>
   </div>
@@ -120,6 +150,59 @@
     <div class="stat">
       <div id="matchedScanCount" class="stat-number">0</div>
       <div class="stat-label">Matched Scans Today</div>
+    </div>
+  </div>
+
+
+  <div class="card" id="schoolLogoCard">
+    <h2>School Logo</h2>
+    <p class="small">
+      Upload a PNG, JPG, or WebP logo. The logo will be saved for this school and can be placed
+      in the upper-right corner of its generated pickup cards.
+    </p>
+
+    <div class="logo-upload-layout">
+      <div class="school-logo-preview-box">
+        <img id="schoolLogoPreview" class="school-logo-preview" alt="School logo preview" />
+        <div id="schoolLogoPlaceholder" class="logo-placeholder">
+          No school logo uploaded yet.
+        </div>
+      </div>
+
+      <div>
+        <label for="schoolLogoInput">Choose Logo Image</label>
+        <input
+          id="schoolLogoInput"
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          onchange="previewSelectedSchoolLogo(event)"
+        />
+
+        <div id="schoolLogoFileDetails" class="file-details">
+          Accepted formats: PNG, JPG, or WebP. Maximum size: 2 MB.
+        </div>
+
+        <div class="toolbar">
+          <button
+            id="uploadSchoolLogoButton"
+            class="save-btn"
+            onclick="uploadSchoolLogo()"
+          >
+            Upload Logo
+          </button>
+
+          <button
+            id="removeSchoolLogoButton"
+            class="danger-btn"
+            onclick="removeSchoolLogo()"
+            disabled
+          >
+            Remove Logo
+          </button>
+        </div>
+
+        <p id="schoolLogoStatus" class="small">Checking for an existing school logo...</p>
+      </div>
     </div>
   </div>
 
@@ -269,6 +352,9 @@
   // The safest security comes from Supabase Row Level Security policies, not from hiding this anon key.
 
   const GENERATE_CARDS_URL = "https://pickuppulse-card-generator.onrender.com/generate-cards";
+  const SCHOOL_LOGO_BUCKET = "school-logos";
+  const MAX_LOGO_FILE_SIZE = 2 * 1024 * 1024;
+  const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
 
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -280,6 +366,8 @@
   let scansLoading = false;
   let scansRefreshTimer = null;
   let latestScans = [];
+  let currentSchoolLogoPath = null;
+  let selectedLogoPreviewUrl = null;
 
   async function checkLogin() {
     const userInfo = document.getElementById("userInfo");
@@ -340,16 +428,313 @@
 
     const { data: school, error } = await supabaseClient
       .from("schools")
-      .select("name")
+      .select("name, logo_path")
       .eq("id", currentUserSchoolId)
       .single();
 
     if (error) {
       schoolNameBox.innerText = "School lookup error: " + error.message;
+      setSchoolLogoStatus("Could not load school logo: " + error.message, "error");
       return;
     }
 
     schoolNameBox.innerText = school.name || "School Admin Dashboard";
+    currentSchoolLogoPath = school.logo_path || null;
+    displayStoredSchoolLogo(currentSchoolLogoPath);
+  }
+
+
+  function scrollToLogoTools() {
+    document.getElementById("schoolLogoCard").scrollIntoView({
+      behavior: "smooth",
+      block: "start"
+    });
+  }
+
+  function setSchoolLogoStatus(message, className = "small") {
+    const status = document.getElementById("schoolLogoStatus");
+    status.innerText = message;
+    status.className = className;
+  }
+
+  function getSchoolLogoPublicUrl(logoPath) {
+    if (!logoPath) return null;
+
+    const { data } = supabaseClient.storage
+      .from(SCHOOL_LOGO_BUCKET)
+      .getPublicUrl(logoPath);
+
+    return data?.publicUrl || null;
+  }
+
+  function clearTemporaryLogoPreviewUrl() {
+    if (selectedLogoPreviewUrl) {
+      URL.revokeObjectURL(selectedLogoPreviewUrl);
+      selectedLogoPreviewUrl = null;
+    }
+  }
+
+  function showLogoPreview(src, isTemporary = false) {
+    const preview = document.getElementById("schoolLogoPreview");
+    const placeholder = document.getElementById("schoolLogoPlaceholder");
+
+    if (!src) {
+      preview.removeAttribute("src");
+      preview.style.display = "none";
+      placeholder.style.display = "block";
+      placeholder.innerText = "No school logo uploaded yet.";
+      return;
+    }
+
+    preview.src = src;
+    preview.style.display = "block";
+    placeholder.style.display = "none";
+
+    if (!isTemporary) {
+      preview.onerror = function() {
+        preview.style.display = "none";
+        placeholder.style.display = "block";
+        placeholder.innerText = "The saved logo could not be displayed.";
+      };
+    } else {
+      preview.onerror = null;
+    }
+  }
+
+  function displayStoredSchoolLogo(logoPath) {
+    const removeButton = document.getElementById("removeSchoolLogoButton");
+    clearTemporaryLogoPreviewUrl();
+
+    if (!logoPath) {
+      showLogoPreview(null);
+      removeButton.disabled = true;
+      setSchoolLogoStatus("No logo is currently saved for this school.", "small");
+      return;
+    }
+
+    const publicUrl = getSchoolLogoPublicUrl(logoPath);
+    showLogoPreview(publicUrl);
+    removeButton.disabled = false;
+    setSchoolLogoStatus("Current school logo loaded.", "success");
+  }
+
+  function getLogoFileExtension(file) {
+    const extensionByType = {
+      "image/png": "png",
+      "image/jpeg": "jpg",
+      "image/webp": "webp"
+    };
+
+    return extensionByType[file.type] || null;
+  }
+
+  function validateSchoolLogoFile(file) {
+    if (!file) {
+      throw new Error("Please choose a logo image first.");
+    }
+
+    if (!ALLOWED_LOGO_TYPES.includes(file.type)) {
+      throw new Error("The logo must be a PNG, JPG, or WebP image.");
+    }
+
+    if (file.size > MAX_LOGO_FILE_SIZE) {
+      throw new Error("The logo must be no larger than 2 MB.");
+    }
+
+    const extension = getLogoFileExtension(file);
+    if (!extension) {
+      throw new Error("The selected image type is not supported.");
+    }
+
+    return extension;
+  }
+
+  function previewSelectedSchoolLogo(event) {
+    const file = event.target.files[0];
+    const details = document.getElementById("schoolLogoFileDetails");
+
+    clearTemporaryLogoPreviewUrl();
+
+    if (!file) {
+      details.innerText = "Accepted formats: PNG, JPG, or WebP. Maximum size: 2 MB.";
+      displayStoredSchoolLogo(currentSchoolLogoPath);
+      return;
+    }
+
+    try {
+      validateSchoolLogoFile(file);
+      selectedLogoPreviewUrl = URL.createObjectURL(file);
+      showLogoPreview(selectedLogoPreviewUrl, true);
+
+      const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
+      details.innerText = `${file.name} (${sizeMb} MB)`;
+      setSchoolLogoStatus('Preview ready. Click "Upload Logo" to save it.', "small");
+    } catch (error) {
+      event.target.value = "";
+      details.innerText = error.message;
+      displayStoredSchoolLogo(currentSchoolLogoPath);
+      setSchoolLogoStatus(error.message, "error");
+    }
+  }
+
+  async function saveSchoolLogoPath(logoPath) {
+    /*
+      This first tries the safer SQL function recommended for PickUpPulse.
+      If that function has not been created yet, it falls back to a normal
+      schools-table update, which still requires a matching Supabase RLS policy.
+    */
+    const rpcResult = await supabaseClient.rpc("set_my_school_logo", {
+      new_logo_path: logoPath
+    });
+
+    if (!rpcResult.error) return;
+
+    const missingFunction =
+      rpcResult.error.code === "PGRST202" ||
+      String(rpcResult.error.message || "").toLowerCase().includes("set_my_school_logo");
+
+    if (!missingFunction) {
+      throw rpcResult.error;
+    }
+
+    const { error: updateError } = await supabaseClient
+      .from("schools")
+      .update({ logo_path: logoPath })
+      .eq("id", currentUserSchoolId);
+
+    if (updateError) throw updateError;
+  }
+
+  async function uploadSchoolLogo() {
+    if (!currentUserSchoolId) {
+      alert("No school_id was found for this admin account.");
+      return;
+    }
+
+    const fileInput = document.getElementById("schoolLogoInput");
+    const uploadButton = document.getElementById("uploadSchoolLogoButton");
+    const file = fileInput.files[0];
+
+    let extension;
+    try {
+      extension = validateSchoolLogoFile(file);
+    } catch (error) {
+      setSchoolLogoStatus(error.message, "error");
+      return;
+    }
+
+    uploadButton.disabled = true;
+    uploadButton.innerText = "Uploading...";
+    setSchoolLogoStatus("Uploading school logo...", "small");
+
+    const oldLogoPath = currentSchoolLogoPath;
+    const newLogoPath = `${currentUserSchoolId}/logo-${Date.now()}.${extension}`;
+
+    try {
+      const { error: uploadError } = await supabaseClient.storage
+        .from(SCHOOL_LOGO_BUCKET)
+        .upload(newLogoPath, file, {
+          cacheControl: "3600",
+          contentType: file.type,
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      try {
+        await saveSchoolLogoPath(newLogoPath);
+      } catch (databaseError) {
+        await supabaseClient.storage
+          .from(SCHOOL_LOGO_BUCKET)
+          .remove([newLogoPath]);
+
+        throw databaseError;
+      }
+
+      currentSchoolLogoPath = newLogoPath;
+      fileInput.value = "";
+      document.getElementById("schoolLogoFileDetails").innerText =
+        "Accepted formats: PNG, JPG, or WebP. Maximum size: 2 MB.";
+
+      displayStoredSchoolLogo(currentSchoolLogoPath);
+      setSchoolLogoStatus("School logo uploaded successfully.", "success");
+
+      if (oldLogoPath && oldLogoPath !== newLogoPath) {
+        const { error: oldDeleteError } = await supabaseClient.storage
+          .from(SCHOOL_LOGO_BUCKET)
+          .remove([oldLogoPath]);
+
+        if (oldDeleteError) {
+          console.warn("New logo saved, but old logo could not be deleted:", oldDeleteError);
+          setSchoolLogoStatus(
+            "New logo saved. The old Storage file could not be removed, but the new logo is active.",
+            "success"
+          );
+        }
+      }
+    } catch (error) {
+      console.error("School logo upload error:", error);
+      setSchoolLogoStatus(
+        "Logo upload failed: " + (error.message || "Unknown error"),
+        "error"
+      );
+    } finally {
+      uploadButton.disabled = false;
+      uploadButton.innerText = "Upload Logo";
+    }
+  }
+
+  async function removeSchoolLogo() {
+    if (!currentUserSchoolId || !currentSchoolLogoPath) {
+      setSchoolLogoStatus("No saved school logo was found to remove.", "small");
+      return;
+    }
+
+    const confirmed = confirm(
+      "Remove this school's saved logo?\n\n" +
+      "Future pickup cards will be generated without a school logo until another logo is uploaded."
+    );
+
+    if (!confirmed) return;
+
+    const removeButton = document.getElementById("removeSchoolLogoButton");
+    const logoPathToRemove = currentSchoolLogoPath;
+
+    removeButton.disabled = true;
+    removeButton.innerText = "Removing...";
+    setSchoolLogoStatus("Removing school logo...", "small");
+
+    try {
+      await saveSchoolLogoPath(null);
+
+      const { error: storageError } = await supabaseClient.storage
+        .from(SCHOOL_LOGO_BUCKET)
+        .remove([logoPathToRemove]);
+
+      currentSchoolLogoPath = null;
+      document.getElementById("schoolLogoInput").value = "";
+      displayStoredSchoolLogo(null);
+
+      if (storageError) {
+        console.warn("Logo reference removed, but Storage file deletion failed:", storageError);
+        setSchoolLogoStatus(
+          "Logo removed from the school. The old Storage file could not be deleted.",
+          "success"
+        );
+      } else {
+        setSchoolLogoStatus("School logo removed.", "success");
+      }
+    } catch (error) {
+      console.error("School logo removal error:", error);
+      setSchoolLogoStatus(
+        "Could not remove logo: " + (error.message || "Unknown error"),
+        "error"
+      );
+      removeButton.disabled = false;
+    } finally {
+      removeButton.innerText = "Remove Logo";
+      removeButton.disabled = !currentSchoolLogoPath;
+    }
   }
 
   async function loadStudents() {
@@ -1122,6 +1507,8 @@
       scansRefreshTimer = setInterval(loadScans, 15000);
     }
   }
+
+  window.addEventListener("beforeunload", clearTemporaryLogoPreviewUrl);
 
   init();
 </script>
