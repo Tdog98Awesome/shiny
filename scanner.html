@@ -2,297 +2,824 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PickupPulse Scanner</title>
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+
+  <title>PickUpPulse Scanner</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/html5-qrcode"></script>
 
   <style>
-    body { margin: 0; font-family: Arial, sans-serif; background: #f1f5f9; color: #1e293b; }
-    header { background: #0f172a; color: white; padding: 18px 8%; display: flex; justify-content: space-between; align-items: center; }
-    .logo { font-size: 26px; font-weight: bold; color: #38bdf8; }
-    .container { padding: 25px 8%; max-width: 900px; margin: auto; }
-    .card { background: white; padding: 24px; border-radius: 18px; box-shadow: 0 6px 18px rgba(0,0,0,0.08); margin-bottom: 24px; }
-    #reader { width: 100%; max-width: 520px; margin: 20px auto; }
-    button { padding: 14px 18px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin: 5px; font-size: 16px; }
-    .start-btn { background: #2563eb; color: white; }
-    .stop-btn, .logout-btn { background: #ef4444; color: white; }
-    .result { font-size: 28px; font-weight: bold; text-align: center; padding: 24px; border-radius: 16px; margin-top: 20px; }
-    .ready { background: #fef3c7; color: #92400e; }
-    .success { background: #16a34a; color: white; font-size: 34px; }
-    .error { background: #fee2e2; color: #991b1b; }
-    .student-list { font-size: 24px; line-height: 1.7; text-align: center; margin-top: 18px; }
-    .student-name { display: block; font-weight: bold; color: #0f172a; }
-    .qr-value { text-align: center; margin-top: 12px; color: #64748b; font-size: 14px; }
-    .small { color: #64748b; font-size: 14px; text-align: center; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f1f5f9;
+      color: #1e293b;
+    }
+
+    header {
+      background: #0f172a;
+      color: white;
+      padding: 18px 8%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .logo {
+      font-size: 26px;
+      font-weight: bold;
+      color: #38bdf8;
+    }
+
+    .container {
+      padding: 25px 8%;
+      max-width: 900px;
+      margin: auto;
+    }
+
+    .card {
+      background: white;
+      padding: 24px;
+      border-radius: 18px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+      margin-bottom: 24px;
+    }
+
+    #reader {
+      width: 100%;
+      max-width: 520px;
+      margin: 20px auto;
+    }
+
+    button {
+      padding: 14px 18px;
+      border: none;
+      border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 16px;
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .start-btn {
+      background: #2563eb;
+      color: white;
+    }
+
+    .stop-btn,
+    .logout-btn {
+      background: #ef4444;
+      color: white;
+    }
+
+    .result {
+      font-size: 28px;
+      font-weight: bold;
+      text-align: center;
+      padding: 24px;
+      border-radius: 16px;
+      margin-top: 20px;
+    }
+
+    .ready {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .success {
+      background: #16a34a;
+      color: white;
+      font-size: 34px;
+    }
+
+    .error {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .student-list {
+      font-size: 24px;
+      line-height: 1.7;
+      text-align: center;
+      margin-top: 18px;
+    }
+
+    .student-entry {
+      margin-bottom: 18px;
+    }
+
+    .student-name {
+      display: block;
+      font-weight: bold;
+      color: #0f172a;
+    }
+
+    .student-grade {
+      color: #475569;
+      font-size: 19px;
+    }
+
+    .qr-value {
+      text-align: center;
+      margin-top: 12px;
+      color: #64748b;
+      font-size: 14px;
+      overflow-wrap: anywhere;
+    }
+
+    .small {
+      color: #64748b;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    #userInfo {
+      line-height: 1.6;
+    }
+
+    @media (max-width: 600px) {
+      header {
+        padding: 16px 5%;
+      }
+
+      .container {
+        padding: 18px 4%;
+      }
+
+      .card {
+        padding: 18px;
+      }
+
+      .result {
+        font-size: 23px;
+      }
+
+      .success {
+        font-size: 27px;
+      }
+
+      .student-list {
+        font-size: 21px;
+      }
+    }
   </style>
 </head>
 
 <body>
 
-<header>
-  <div>
-    <div class="logo">PickupPulse</div>
-    <div>QR Pickup Scanner</div>
+  <header>
+    <div>
+      <div class="logo">PickUpPulse</div>
+      <div>QR Pickup Scanner</div>
+    </div>
+
+    <button
+      class="logout-btn"
+      type="button"
+      onclick="logout()"
+    >
+      Logout
+    </button>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <h1>Scan Parent Pickup QR Code</h1>
+
+      <p id="userInfo">Checking login and permissions...</p>
+
+      <button
+        id="startButton"
+        class="start-btn"
+        type="button"
+        onclick="startScanner()"
+        disabled
+      >
+        Start Scanner
+      </button>
+
+      <button
+        id="stopButton"
+        class="stop-btn"
+        type="button"
+        onclick="stopScanner()"
+        disabled
+      >
+        Stop Scanner
+      </button>
+
+      <div id="reader"></div>
+
+      <p class="small">
+        Use this page from
+        https://getpickuppulse.com/scanner.html
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Latest Scan</h2>
+
+      <div id="scanResult" class="result ready">
+        Checking access...
+      </div>
+
+      <div id="studentNames" class="student-list"></div>
+      <div id="qrValue" class="qr-value"></div>
+    </div>
   </div>
-  <button class="logout-btn" onclick="logout()">Logout</button>
-</header>
 
-<div class="container">
-  <div class="card">
-    <h1>Scan Parent Pickup QR Code</h1>
-    <p id="userInfo">Checking login...</p>
+  <script>
+    const SUPABASE_URL =
+      "https://pthjwhhaupyswopadmsv.supabase.co";
 
-    <button class="start-btn" onclick="startScanner()">Start Scanner</button>
-    <button class="stop-btn" onclick="stopScanner()">Stop Scanner</button>
+    const SUPABASE_ANON_KEY =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0aGp3aGhhdXB5c3dvcGFkbXN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjgzMTcsImV4cCI6MjA5MTQ0NDMxN30.oSFyNIf3pr9_Nbc8vG4pr9OGU7ufUJgEpW6eQNCwtYs";
 
-    <div id="reader"></div>
+    const supabaseClient = supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_ANON_KEY
+    );
 
-    <p class="small">Use this page from https://getpickuppulse.com/scanner.html</p>
-  </div>
+    let html5QrCode = null;
+    let scanLocked = false;
+    let accessApproved = false;
 
-  <div class="card">
-    <h2>Latest Scan</h2>
-    <div id="scanResult" class="result ready">Ready for scan...</div>
-    <div id="studentNames" class="student-list"></div>
-    <div id="qrValue" class="qr-value"></div>
-  </div>
-</div>
+    let currentUserId = null;
+    let currentUserRole = null;
+    let currentUserSchoolId = null;
 
-<script>
-  const SUPABASE_URL = "https://pthjwhhaupyswopadmsv.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0aGp3aGhhdXB5c3dvcGFkbXN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjgzMTcsImV4cCI6MjA5MTQ0NDMxN30.oSFyNIf3pr9_Nbc8vG4pr9OGU7ufUJgEpW6eQNCwtYs";
+    const startButton =
+      document.getElementById("startButton");
 
-  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const stopButton =
+      document.getElementById("stopButton");
 
-  let html5QrCode = null;
-  let scanLocked = false;
-  let currentUserSchoolId = null;
+    function showMessage(text, type) {
+      const box = document.getElementById("scanResult");
+      box.className = "result " + type;
+      box.innerText = text;
+    }
 
-  async function checkLogin() {
-    const userInfo = document.getElementById("userInfo");
+    function clearStudentDisplay() {
+      document.getElementById("studentNames").innerHTML = "";
+      document.getElementById("qrValue").innerText = "";
+    }
 
-    try {
-      const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
 
-      if (sessionError) {
-        userInfo.innerText = "Session error: " + sessionError.message;
-        return;
-      }
+    async function denyAccess(message) {
+      accessApproved = false;
+      startButton.disabled = true;
+      stopButton.disabled = true;
 
-      if (!sessionData.session) {
-        userInfo.innerText = "Not logged in. Redirecting...";
+      document.getElementById("userInfo").innerText = message;
+      showMessage("Scanner access denied.", "error");
+
+      await supabaseClient.auth.signOut();
+
+      setTimeout(() => {
         window.location.href = "login.html";
-        return;
-      }
-
-      const user = sessionData.session.user;
-
-      const { data: profile, error } = await supabaseClient
-        .from("profiles")
-        .select("role, school_id, email")
-        .eq("id", user.id)
-        .single();
-
-      if (error) {
-        userInfo.innerText = "Profile lookup error: " + error.message;
-        return;
-      }
-
-      if (!profile) {
-        userInfo.innerText = "No profile found for this user.";
-        return;
-      }
-
-      const allowedRoles = ["super_admin", "pickup_staff"];
-
-      if (!allowedRoles.includes(profile.role)) {
-        userInfo.innerText = "Access denied. Role is: " + profile.role;
-        return;
-      }
-
-      currentUserSchoolId = profile.school_id;
-
-      userInfo.innerText =
-        "Logged in as: " + (profile.email || user.email) +
-        " | Role: " + profile.role +
-        " | School ID: " + (currentUserSchoolId || "None assigned");
-
-    } catch (err) {
-      userInfo.innerText = "Login check failed: " + err.message;
+      }, 1500);
     }
-  }
 
-  async function startScanner() {
-    if (html5QrCode) return;
+    async function checkLogin() {
+      const userInfo =
+        document.getElementById("userInfo");
 
-    html5QrCode = new Html5Qrcode("reader");
+      try {
+        const {
+          data: sessionData,
+          error: sessionError
+        } = await supabaseClient.auth.getSession();
 
-    const config = {
-      fps: 10,
-      qrbox: { width: 250, height: 250 }
-    };
+        if (sessionError) {
+          await denyAccess(
+            "Session error: " + sessionError.message
+          );
+          return;
+        }
 
-    try {
-      const cameras = await Html5Qrcode.getCameras();
+        if (!sessionData.session) {
+          window.location.href = "login.html";
+          return;
+        }
 
-      if (!cameras || cameras.length === 0) {
-        showMessage("No camera found on this device.", "error");
+        const user = sessionData.session.user;
+        currentUserId = user.id;
+
+        const {
+          data: profile,
+          error: profileError
+        } = await supabaseClient
+          .from("profiles")
+          .select("role, school_id, email")
+          .eq("id", currentUserId)
+          .single();
+
+        if (profileError || !profile) {
+          console.error(
+            "Profile lookup error:",
+            profileError
+          );
+
+          await denyAccess(
+            "No valid PickUpPulse profile was found."
+          );
+          return;
+        }
+
+        const allowedRoles = [
+          "super_admin",
+          "school_admin",
+          "pickup_staff"
+        ];
+
+        if (!allowedRoles.includes(profile.role)) {
+          await denyAccess(
+            "Your account does not have scanner access."
+          );
+          return;
+        }
+
+        currentUserRole = profile.role;
+        currentUserSchoolId = profile.school_id;
+
+        /*
+          School administrators and pickup staff must
+          be assigned to a school.
+        */
+        if (
+          currentUserRole === "school_admin" ||
+          currentUserRole === "pickup_staff"
+        ) {
+          if (!currentUserSchoolId) {
+            await denyAccess(
+              "Your account is not assigned to a school."
+            );
+            return;
+          }
+
+          const {
+            data: school,
+            error: schoolError
+          } = await supabaseClient
+            .from("schools")
+            .select("name, approved, payment_status")
+            .eq("id", currentUserSchoolId)
+            .single();
+
+          if (schoolError || !school) {
+            console.error(
+              "School lookup error:",
+              schoolError
+            );
+
+            await denyAccess(
+              "Your assigned school could not be verified."
+            );
+            return;
+          }
+
+          if (school.approved !== true) {
+            await denyAccess(
+              "Your school is still pending approval."
+            );
+            return;
+          }
+
+          if (school.payment_status !== "paid") {
+            await denyAccess(
+              "Your school's PickUpPulse account is not active."
+            );
+            return;
+          }
+
+          userInfo.innerText =
+            "Logged in as: " +
+            (profile.email || user.email) +
+            " | Role: " +
+            currentUserRole +
+            " | School: " +
+            (school.name || currentUserSchoolId);
+        } else {
+          userInfo.innerText =
+            "Logged in as: " +
+            (profile.email || user.email) +
+            " | Role: " +
+            currentUserRole +
+            " | All-school scanner access";
+        }
+
+        accessApproved = true;
+        startButton.disabled = false;
+
+        showMessage("Ready to start scanner.", "ready");
+      } catch (error) {
+        console.error("Login check failed:", error);
+
+        await denyAccess(
+          "Login check failed. Please sign in again."
+        );
+      }
+    }
+
+    async function startScanner() {
+      if (!accessApproved) {
+        showMessage(
+          "Scanner access has not been approved.",
+          "error"
+        );
+        return;
+      }
+
+      if (html5QrCode) {
+        return;
+      }
+
+      startButton.disabled = true;
+      stopButton.disabled = false;
+
+      html5QrCode = new Html5Qrcode("reader");
+
+      const config = {
+        fps: 10,
+        qrbox: {
+          width: 250,
+          height: 250
+        }
+      };
+
+      try {
+        const cameras = await Html5Qrcode.getCameras();
+
+        if (!cameras || cameras.length === 0) {
+          showMessage(
+            "No camera was found on this device.",
+            "error"
+          );
+
+          html5QrCode = null;
+          startButton.disabled = false;
+          stopButton.disabled = true;
+          return;
+        }
+
+        const backCamera = cameras.find((camera) => {
+          const label =
+            String(camera.label || "").toLowerCase();
+
+          return (
+            label.includes("back") ||
+            label.includes("rear") ||
+            label.includes("environment")
+          );
+        });
+
+        const cameraId =
+          backCamera ? backCamera.id : cameras[0].id;
+
+        await html5QrCode.start(
+          cameraId,
+          config,
+          onScanSuccess
+        );
+
+        showMessage("Ready for scan...", "ready");
+      } catch (error) {
+        console.error("Camera error:", error);
+
+        showMessage(
+          "Camera error: " +
+          (error.message || String(error)),
+          "error"
+        );
+
         html5QrCode = null;
+        startButton.disabled = false;
+        stopButton.disabled = true;
+      }
+    }
+
+    async function stopScanner() {
+      if (!html5QrCode) {
         return;
       }
 
-      const backCamera = cameras.find(camera =>
-        camera.label.toLowerCase().includes("back") ||
-        camera.label.toLowerCase().includes("rear") ||
-        camera.label.toLowerCase().includes("environment")
-      );
+      try {
+        const state = html5QrCode.getState();
 
-      const cameraId = backCamera ? backCamera.id : cameras[0].id;
+        if (
+          state === Html5QrcodeScannerState.SCANNING ||
+          state === Html5QrcodeScannerState.PAUSED
+        ) {
+          await html5QrCode.stop();
+        }
 
-      await html5QrCode.start(cameraId, config, onScanSuccess);
+        html5QrCode.clear();
+      } catch (error) {
+        console.error("Stop scanner error:", error);
+      }
 
-      showMessage("Ready for scan...", "ready");
-
-    } catch (err) {
-      showMessage("Camera error: " + err, "error");
       html5QrCode = null;
-    }
-  }
+      scanLocked = false;
 
-  async function stopScanner() {
-    if (!html5QrCode) return;
+      startButton.disabled = !accessApproved;
+      stopButton.disabled = true;
 
-    try {
-      await html5QrCode.stop();
-      html5QrCode.clear();
-    } catch (err) {
-      console.error(err);
+      showMessage("Scanner stopped.", "ready");
     }
 
-    html5QrCode = null;
-    scanLocked = false;
-    showMessage("Scanner stopped.", "ready");
-  }
+    async function onScanSuccess(decodedText) {
+      if (scanLocked || !accessApproved) {
+        return;
+      }
 
-  async function onScanSuccess(decodedText) {
-    if (scanLocked) return;
+      scanLocked = true;
 
-    scanLocked = true;
+      try {
+        if (html5QrCode) {
+          html5QrCode.pause(true);
+        }
 
-    try {
-      await html5QrCode.pause(true);
+        showMessage("✓ QR Code Recognized", "success");
 
-      showMessage("✓ QR Code Recognized", "success");
-      document.getElementById("studentNames").innerHTML = "Looking up student...";
-      document.getElementById("qrValue").innerText = "QR value: " + decodedText;
+        document.getElementById(
+          "studentNames"
+        ).innerHTML = "Looking up student...";
 
-      if (navigator.vibrate) navigator.vibrate(200);
+        document.getElementById(
+          "qrValue"
+        ).innerText = "QR value: " + decodedText;
 
-      await handlePickupScan(decodedText);
+        if (navigator.vibrate) {
+          navigator.vibrate(200);
+        }
+
+        await handlePickupScan(decodedText);
+      } catch (error) {
+        console.error(
+          "Scan processing error:",
+          error
+        );
+
+        showMessage(
+          "Scan processing error: " +
+          (error.message || String(error)),
+          "error"
+        );
+      }
 
       setTimeout(async () => {
         try {
-          if (html5QrCode) await html5QrCode.resume();
-        } catch (e) {
-          console.error(e);
+          if (html5QrCode) {
+            const state = html5QrCode.getState();
+
+            if (
+              state === Html5QrcodeScannerState.PAUSED
+            ) {
+              html5QrCode.resume();
+            }
+          }
+        } catch (error) {
+          console.error(
+            "Scanner resume error:",
+            error
+          );
         }
 
         scanLocked = false;
 
-        if (!document.getElementById("scanResult").classList.contains("error")) {
-          showMessage("Ready for next scan...", "ready");
+        const resultBox =
+          document.getElementById("scanResult");
+
+        if (!resultBox.classList.contains("error")) {
+          showMessage(
+            "Ready for next scan...",
+            "ready"
+          );
         }
       }, 1500);
-
-    } catch (err) {
-      console.error(err);
-      scanLocked = false;
-      showMessage("Scan processing error: " + err.message, "error");
-    }
-  }
-
-  async function handlePickupScan(qrValue) {
-    const cleanQrValue = String(qrValue).trim();
-
-    const { data: students, error: studentError } = await supabaseClient
-      .from("students")
-      .select("id, first_name, last_name, grade, qr_value, school_id")
-      .eq("qr_value", cleanQrValue)
-      .eq("active", true);
-
-    if (studentError) {
-      showMessage("Student lookup error: " + studentError.message, "error");
-      return;
     }
 
-    let scanSchoolId = null;
-    let firstStudentId = null;
+    async function handlePickupScan(qrValue) {
+      const cleanQrValue =
+        String(qrValue).trim();
 
-    if (students && students.length > 0) {
-      scanSchoolId = students[0].school_id;
-      firstStudentId = students[0].id;
-    } else if (currentUserSchoolId) {
-      scanSchoolId = currentUserSchoolId;
+      if (!cleanQrValue) {
+        showMessage(
+          "The scanned QR code was empty.",
+          "error"
+        );
+        return;
+      }
+
+      /*
+        Begin the student lookup.
+
+        School administrators and pickup staff can only
+        retrieve students from their assigned school.
+
+        Super admins may retrieve students from any school.
+      */
+      let studentQuery = supabaseClient
+        .from("students")
+        .select(
+          "id, first_name, last_name, grade, qr_value, school_id"
+        )
+        .eq("qr_value", cleanQrValue)
+        .eq("active", true);
+
+      if (currentUserRole !== "super_admin") {
+        studentQuery = studentQuery.eq(
+          "school_id",
+          currentUserSchoolId
+        );
+      }
+
+      const {
+        data: students,
+        error: studentError
+      } = await studentQuery;
+
+      if (studentError) {
+        console.error(
+          "Student lookup error:",
+          studentError
+        );
+
+        showMessage(
+          "Student lookup error: " +
+          studentError.message,
+          "error"
+        );
+
+        document.getElementById(
+          "studentNames"
+        ).innerHTML =
+          "The student lookup could not be completed.";
+
+        return;
+      }
+
+      const matchedStudents =
+        Array.isArray(students) ? students : [];
+
+      let scanSchoolId = currentUserSchoolId;
+      let firstStudentId = null;
+
+      if (matchedStudents.length > 0) {
+        scanSchoolId =
+          matchedStudents[0].school_id;
+
+        firstStudentId =
+          matchedStudents[0].id;
+      }
+
+      /*
+        A super admin may scan any school's QR code,
+        but a scan with no matching student cannot be
+        saved without a school_id.
+      */
+      if (!scanSchoolId) {
+        showMessage(
+          "No school could be identified for this QR code.",
+          "error"
+        );
+
+        document.getElementById(
+          "studentNames"
+        ).innerHTML =
+          "No matching active student was found.";
+
+        return;
+      }
+
+      if (matchedStudents.length === 0) {
+        showMessage(
+          "QR recognized, but no active student was found for this school.",
+          "error"
+        );
+
+        document.getElementById(
+          "studentNames"
+        ).innerHTML =
+          "No matching active student found.";
+      } else {
+        showMessage(
+          "✓ Pickup Match Found",
+          "success"
+        );
+
+        document.getElementById(
+          "studentNames"
+        ).innerHTML = matchedStudents
+          .map((student) => {
+            const fullName =
+              escapeHtml(student.first_name) +
+              " " +
+              escapeHtml(student.last_name);
+
+            const grade =
+              escapeHtml(student.grade);
+
+            return `
+              <div class="student-entry">
+                <span class="student-name">
+                  ${fullName}
+                </span>
+                <span class="student-grade">
+                  Grade ${grade}
+                </span>
+              </div>
+            `;
+          })
+          .join("");
+      }
+
+      const timestamp =
+        new Date().toISOString();
+
+      const {
+        error: scanError
+      } = await supabaseClient
+        .from("scan_events")
+        .insert([
+          {
+            school_id: scanSchoolId,
+            scanned_by_user_id: currentUserId,
+            scanned_value: cleanQrValue,
+            qr_value: cleanQrValue,
+            student_id: firstStudentId,
+            result:
+              matchedStudents.length > 0
+                ? "matched"
+                : "not_found",
+            created_at: timestamp,
+            scanned_at: timestamp
+          }
+        ]);
+
+      if (scanError) {
+        console.error(
+          "Scan save error:",
+          scanError
+        );
+
+        showMessage(
+          "Scan recognized, but save failed: " +
+          scanError.message,
+          "error"
+        );
+
+        return;
+      }
+
+      console.log("Scan saved successfully.");
     }
 
-    if (!scanSchoolId) {
-      showMessage("Scan save failed: no school_id found for this QR code.", "error");
-      document.getElementById("studentNames").innerHTML = "No matching student found.";
-      return;
+    async function logout() {
+      try {
+        await stopScanner();
+      } catch (error) {
+        console.error(error);
+      }
+
+      await supabaseClient.auth.signOut();
+      window.location.href = "login.html";
     }
 
-    if (!students || students.length === 0) {
-      showMessage("QR recognized, but no active student found.", "error");
-      document.getElementById("studentNames").innerHTML = "No matching active student found.";
-    } else {
-      showMessage("✓ Pickup Match Found", "success");
+    window.addEventListener(
+      "beforeunload",
+      async () => {
+        if (html5QrCode) {
+          try {
+            await html5QrCode.stop();
+          } catch (error) {
+            console.error(error);
+          }
+        }
+      }
+    );
 
-      document.getElementById("studentNames").innerHTML =
-        students
-          .map(s =>
-            `<span class="student-name">${s.first_name} ${s.last_name}</span>Grade ${s.grade}`
-          )
-          .join("<br><br>");
-    }
-
-    const { error: scanError } = await supabaseClient
-  .from("scan_events")
-  .insert([
-    {
-      school_id: scanSchoolId,
-      scanned_value: cleanQrValue,
-      qr_value: cleanQrValue,
-      student_id: firstStudentId,
-      result: students && students.length > 0 ? "matched" : "not_found",
-      created_at: new Date().toISOString(),
-      scanned_at: new Date().toISOString()
-    }
-  ]);
-
-    if (scanError) {
-      showMessage("Scan recognized, but save failed: " + scanError.message, "error");
-      console.error("Scan save error:", scanError);
-      return;
-    }
-
-    console.log("Scan saved successfully.");
-  }
-
-  function showMessage(text, type) {
-    const box = document.getElementById("scanResult");
-    box.className = "result " + type;
-    box.innerText = text;
-  }
-
-  async function logout() {
-    await supabaseClient.auth.signOut();
-    window.location.href = "login.html";
-  }
-
-  checkLogin();
-</script>
+    checkLogin();
+  </script>
 
 </body>
 </html>
