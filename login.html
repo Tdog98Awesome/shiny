@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -26,7 +27,8 @@
       max-width: 420px;
       padding: 40px;
       border-radius: 20px;
-      box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+      box-sizing: border-box;
     }
 
     .logo {
@@ -59,6 +61,12 @@
       box-sizing: border-box;
     }
 
+    input:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
     button {
       width: 100%;
       padding: 15px;
@@ -71,7 +79,7 @@
       cursor: pointer;
     }
 
-    button:hover {
+    button:hover:not(:disabled) {
       background: #1d4ed8;
     }
 
@@ -84,6 +92,7 @@
       text-align: center;
       margin-top: 18px;
       font-weight: bold;
+      min-height: 22px;
     }
 
     .footer {
@@ -98,6 +107,10 @@
       text-decoration: none;
       font-weight: bold;
     }
+
+    .footer a:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 
@@ -108,16 +121,28 @@
     <div class="subtitle">School Staff Login</div>
 
     <form id="loginForm">
-      <label>Email</label>
-      <input type="email" id="email" required placeholder="name@school.org" />
+      <label for="email">Email</label>
+      <input
+        type="email"
+        id="email"
+        required
+        autocomplete="email"
+        placeholder="name@school.org"
+      />
 
-      <label>Password</label>
-      <input type="password" id="password" required placeholder="Enter password" />
+      <label for="password">Password</label>
+      <input
+        type="password"
+        id="password"
+        required
+        autocomplete="current-password"
+        placeholder="Enter password"
+      />
 
       <button type="submit" id="loginButton">Login</button>
     </form>
 
-    <div class="message" id="message"></div>
+    <div class="message" id="message" aria-live="polite"></div>
 
     <div class="footer">
       <a href="index.html">Return Home</a>
@@ -125,8 +150,11 @@
   </div>
 
   <script>
-    const SUPABASE_URL = "https://pthjwhhaupyswopadmsv.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0aGp3aGhhdXB5c3dvcGFkbXN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjgzMTcsImV4cCI6MjA5MTQ0NDMxN30.oSFyNIf3pr9_Nbc8vG4pr9OGU7ufUJgEpW6eQNCwtYs";
+    const SUPABASE_URL =
+      "https://pthjwhhaupyswopadmsv.supabase.co";
+
+    const SUPABASE_ANON_KEY =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0aGp3aGhhdXB5c3dvcGFkbXN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjgzMTcsImV4cCI6MjA5MTQ0NDMxN30.oSFyNIf3pr9_Nbc8vG4pr9OGU7ufUJgEpW6eQNCwtYs";
 
     const supabaseClient = supabase.createClient(
       SUPABASE_URL,
@@ -137,94 +165,203 @@
     const message = document.getElementById("message");
     const loginButton = document.getElementById("loginButton");
 
-    form.addEventListener("submit", async function(e) {
-      e.preventDefault();
+    function showMessage(text, color) {
+      message.innerText = text;
+      message.style.color = color;
+    }
 
-      message.innerText = "";
+    function resetLoginButton() {
+      loginButton.innerText = "Login";
+      loginButton.disabled = false;
+    }
+
+    async function signOutAndReset() {
+      await supabaseClient.auth.signOut();
+      resetLoginButton();
+    }
+
+    form.addEventListener("submit", async function (event) {
+      event.preventDefault();
+
+      showMessage("", "");
       loginButton.innerText = "Logging in...";
       loginButton.disabled = true;
 
-      const email = document.getElementById("email").value.trim();
+      const email = document
+        .getElementById("email")
+        .value
+        .trim()
+        .toLowerCase();
+
       const password = document.getElementById("password").value;
 
-      const { data, error } = await supabaseClient.auth.signInWithPassword({
-        email: email,
-        password: password
-      });
+      try {
+        const { data, error } =
+          await supabaseClient.auth.signInWithPassword({
+            email,
+            password
+          });
 
-      if (error) {
-        message.style.color = "red";
-        message.innerText = error.message;
-        loginButton.innerText = "Login";
-        loginButton.disabled = false;
-        return;
-      }
+        if (error) {
+          showMessage(error.message, "red");
+          resetLoginButton();
+          return;
+        }
 
-      const userId = data.user.id;
+        if (!data.user) {
+          showMessage(
+            "Login failed because no user account was returned.",
+            "red"
+          );
 
-      const { data: profile, error: profileError } = await supabaseClient
-        .from("profiles")
-        .select("role, school_id")
-        .eq("id", userId)
-        .single();
+          await signOutAndReset();
+          return;
+        }
 
-      if (profileError || !profile) {
-        message.style.color = "red";
-        message.innerText = "Login worked, but no profile/role was found.";
-        loginButton.innerText = "Login";
-        loginButton.disabled = false;
-        return;
-      }
+        const userId = data.user.id;
 
-      if (profile.role === "school_admin") {
-        const { data: school, error: schoolError } = await supabaseClient
-          .from("schools")
-          .select("approved, payment_status")
-          .eq("id", profile.school_id)
+        const {
+          data: profile,
+          error: profileError
+        } = await supabaseClient
+          .from("profiles")
+          .select("role, school_id")
+          .eq("id", userId)
           .single();
 
-        if (schoolError || !school) {
-          message.style.color = "red";
-          message.innerText = "Could not verify school approval/payment status.";
-          await supabaseClient.auth.signOut();
-          loginButton.innerText = "Login";
-          loginButton.disabled = false;
+        if (profileError || !profile) {
+          console.error("Profile lookup error:", profileError);
+
+          showMessage(
+            "Login worked, but no profile or role was found.",
+            "red"
+          );
+
+          await signOutAndReset();
           return;
         }
 
-        if (school.approved !== true) {
-          message.style.color = "orange";
-          message.innerText = "Your school account is pending approval.";
-          await supabaseClient.auth.signOut();
-          loginButton.innerText = "Login";
-          loginButton.disabled = false;
+        const role = profile.role;
+
+        const validRoles = [
+          "super_admin",
+          "school_admin",
+          "pickup_staff"
+        ];
+
+        if (!validRoles.includes(role)) {
+          showMessage(
+            "Unknown role: " + String(role),
+            "red"
+          );
+
+          await signOutAndReset();
           return;
         }
 
-        if (school.payment_status !== "paid") {
-          message.style.color = "red";
-          message.innerText = "Your school account is not active yet. Please complete payment.";
-          await supabaseClient.auth.signOut();
-          loginButton.innerText = "Login";
-          loginButton.disabled = false;
+        /*
+          School administrators and pickup staff must:
+          1. Be assigned to a school.
+          2. Belong to an approved school.
+          3. Belong to a school with active payment.
+        */
+        if (
+          role === "school_admin" ||
+          role === "pickup_staff"
+        ) {
+          if (!profile.school_id) {
+            showMessage(
+              "Your account is not assigned to a school.",
+              "red"
+            );
+
+            await signOutAndReset();
+            return;
+          }
+
+          const {
+            data: school,
+            error: schoolError
+          } = await supabaseClient
+            .from("schools")
+            .select("approved, payment_status")
+            .eq("id", profile.school_id)
+            .single();
+
+          if (schoolError || !school) {
+            console.error(
+              "School verification error:",
+              schoolError
+            );
+
+            showMessage(
+              "Could not verify your school's account status.",
+              "red"
+            );
+
+            await signOutAndReset();
+            return;
+          }
+
+          if (school.approved !== true) {
+            showMessage(
+              "Your school account is pending approval.",
+              "orange"
+            );
+
+            await signOutAndReset();
+            return;
+          }
+
+          if (school.payment_status !== "paid") {
+            showMessage(
+              role === "school_admin"
+                ? "Your school account is not active yet. Please complete payment."
+                : "Your school's PickUpPulse account is not currently active. Please contact your school administrator.",
+              "red"
+            );
+
+            await signOutAndReset();
+            return;
+          }
+        }
+
+        /*
+          Route users based on their exact role value.
+        */
+        if (role === "super_admin") {
+          window.location.href =
+            "superadmin-dashboard.html";
           return;
         }
+
+        if (role === "school_admin") {
+          window.location.href =
+            "school-admin-dashboard.html";
+          return;
+        }
+
+        if (role === "pickup_staff") {
+          window.location.href = "scanner.html";
+          return;
+        }
+      } catch (unexpectedError) {
+        console.error(
+          "Unexpected login error:",
+          unexpectedError
+        );
+
+        showMessage(
+          "An unexpected error occurred while logging in.",
+          "red"
+        );
+
+        await supabaseClient.auth.signOut();
+        resetLoginButton();
       }
-
-      if (profile.role === "super_admin" || profile.role === "superadmin") {
-  window.location.href = "superadmin-dashboard.html";
-} else if (profile.role === "school_admin") {
-  window.location.href = "school-admin-dashboard.html";
-} else if (profile.role === "pickup_staff") {
-  window.location.href = "scanner.html";
-} else {
-  message.style.color = "red";
-  message.innerText = "Unknown role: " + profile.role;
-  loginButton.innerText = "Login";
-  loginButton.disabled = false;
-}
     });
   </script>
 
 </body>
 </html>
+```
