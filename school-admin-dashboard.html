@@ -95,6 +95,27 @@
     }
     .logo-placeholder { color: #64748b; }
     .file-details { margin-top: 8px; color: #64748b; font-size: 13px; }
+
+    .staff-form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      align-items: end;
+    }
+
+    .staff-card-note {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1e3a8a;
+      padding: 14px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+    }
+
+    .staff-email {
+      overflow-wrap: anywhere;
+    }
+
     @media (max-width: 720px) {
       .logo-upload-layout { grid-template-columns: 1fr; }
     }
@@ -126,6 +147,7 @@
       <button class="primary-btn" onclick="openStudentModal()">Add Student</button>
       <button class="warning-btn" onclick="scrollToCsvTools()">Bulk CSV Upload</button>
       <button class="ghost-btn" onclick="scrollToLogoTools()">School Logo</button>
+      <button class="ghost-btn" onclick="scrollToStaffTools()">Staff Accounts</button>
     </div>
     <p class="small">This dashboard only shows students and scans for the school assigned to this admin account.</p>
   </div>
@@ -203,6 +225,75 @@
 
         <p id="schoolLogoStatus" class="small">Checking for an existing school logo...</p>
       </div>
+    </div>
+  </div>
+
+  <div class="card" id="staffAccountsCard">
+    <h2>Pickup Staff Accounts</h2>
+
+    <div class="staff-card-note">
+      Pickup staff can sign in to PickUpPulse and use the QR scanner, but they do not receive access
+      to this school-admin dashboard. New staff members are automatically assigned to this school.
+    </div>
+
+    <form id="addPickupStaffForm">
+      <div class="staff-form-grid">
+        <div>
+          <label for="staffName">Staff Name</label>
+          <input
+            id="staffName"
+            type="text"
+            maxlength="100"
+            placeholder="Example: Jordan Lee"
+            required
+          />
+        </div>
+
+        <div>
+          <label for="staffEmail">Staff Email</label>
+          <input
+            id="staffEmail"
+            type="email"
+            placeholder="staff@school.org"
+            required
+          />
+        </div>
+
+        <div>
+          <button
+            id="inviteStaffButton"
+            class="save-btn"
+            type="submit"
+          >
+            Invite Pickup Staff
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <p id="staffAccountMessage" class="small">
+      Enter the staff member's name and email address to send an invitation.
+    </p>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-top:22px;">
+      <h3 style="margin:0;">Current Pickup Staff</h3>
+      <button class="refresh-btn" onclick="loadPickupStaff()">Refresh Staff List</button>
+    </div>
+
+    <p id="staffListStatus" class="small">Loading pickup staff...</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody id="pickupStaffTableBody"></tbody>
+      </table>
     </div>
   </div>
 
@@ -400,7 +491,7 @@
     currentProfile = profile;
     currentUserSchoolId = profile.school_id;
 
-    if (profile.role !== "school_admin" && profile.role !== "super_admin" && profile.role !== "superadmin") {
+    if (profile.role !== "school_admin" && profile.role !== "super_admin") {
       userInfo.innerText = "Access denied. Role is: " + profile.role;
       return false;
     }
@@ -443,6 +534,13 @@
     displayStoredSchoolLogo(currentSchoolLogoPath);
   }
 
+
+  function scrollToStaffTools() {
+    document.getElementById("staffAccountsCard").scrollIntoView({
+      behavior: "smooth",
+      block: "start"
+    });
+  }
 
   function scrollToLogoTools() {
     document.getElementById("schoolLogoCard").scrollIntoView({
@@ -735,6 +833,185 @@
       removeButton.innerText = "Remove Logo";
       removeButton.disabled = !currentSchoolLogoPath;
     }
+  }
+
+  function setStaffAccountMessage(message, className = "small") {
+    const box = document.getElementById("staffAccountMessage");
+    box.innerText = message;
+    box.className = className;
+  }
+
+  async function createPickupStaff(staffName, staffEmail) {
+    const {
+      data: sessionData,
+      error: sessionError
+    } = await supabaseClient.auth.getSession();
+
+    if (sessionError || !sessionData.session) {
+      throw new Error(
+        "Your login session has expired. Please log in again."
+      );
+    }
+
+    const { data, error } =
+      await supabaseClient.functions.invoke(
+        "create-pickup-staff",
+        {
+          body: {
+            name: staffName,
+            email: staffEmail
+          }
+        }
+      );
+
+    if (error) {
+      let message = error.message || "The invitation could not be sent.";
+
+      try {
+        if (error.context && typeof error.context.json === "function") {
+          const errorBody = await error.context.json();
+
+          if (errorBody?.error) {
+            message = errorBody.error;
+          }
+        }
+      } catch (parseError) {
+        console.warn("Could not parse Edge Function error response:", parseError);
+      }
+
+      throw new Error(message);
+    }
+
+    if (!data?.success) {
+      throw new Error(
+        data?.error ||
+        "The pickup-staff account could not be created."
+      );
+    }
+
+    return data;
+  }
+
+  async function handlePickupStaffInvite(event) {
+    event.preventDefault();
+
+    if (!currentUserSchoolId) {
+      setStaffAccountMessage(
+        "No school_id was found for this administrator account.",
+        "error"
+      );
+      return;
+    }
+
+    const button = document.getElementById("inviteStaffButton");
+    const form = document.getElementById("addPickupStaffForm");
+
+    const name = document
+      .getElementById("staffName")
+      .value
+      .trim();
+
+    const email = document
+      .getElementById("staffEmail")
+      .value
+      .trim()
+      .toLowerCase();
+
+    if (!name || !email) {
+      setStaffAccountMessage(
+        "Staff name and email are required.",
+        "error"
+      );
+      return;
+    }
+
+    button.disabled = true;
+    button.innerText = "Sending Invitation...";
+    setStaffAccountMessage(
+      "Creating the pickup-staff account and sending the invitation...",
+      "small"
+    );
+
+    try {
+      const result = await createPickupStaff(name, email);
+
+      setStaffAccountMessage(
+        result.message || "Pickup-staff invitation sent successfully.",
+        "success"
+      );
+
+      form.reset();
+      await loadPickupStaff();
+    } catch (error) {
+      console.error("Pickup staff invitation error:", error);
+
+      setStaffAccountMessage(
+        error.message || "The invitation could not be sent.",
+        "error"
+      );
+    } finally {
+      button.disabled = false;
+      button.innerText = "Invite Pickup Staff";
+    }
+  }
+
+  async function loadPickupStaff() {
+    const status = document.getElementById("staffListStatus");
+    const tbody = document.getElementById("pickupStaffTableBody");
+
+    status.className = "small";
+    status.innerText = "Loading pickup staff...";
+
+    if (!currentUserSchoolId) {
+      status.className = "error";
+      status.innerText = "No school is assigned to this administrator account.";
+      tbody.innerHTML = "";
+      return [];
+    }
+
+    const { data: staffRows, error } = await supabaseClient
+      .from("profiles")
+      .select("id, email, role, school_id, created_at")
+      .eq("school_id", currentUserSchoolId)
+      .eq("role", "pickup_staff")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Pickup staff list error:", error);
+      status.className = "error";
+      status.innerText =
+        "Could not load pickup staff: " + error.message;
+      tbody.innerHTML = "";
+      return [];
+    }
+
+    const staff = staffRows || [];
+
+    if (staff.length === 0) {
+      status.innerText = "No pickup-staff accounts have been created yet.";
+      tbody.innerHTML =
+        '<tr><td colspan="4" class="small">No pickup staff found.</td></tr>';
+      return [];
+    }
+
+    status.innerText =
+      staff.length + (staff.length === 1 ? " pickup-staff account found." : " pickup-staff accounts found.");
+
+    tbody.innerHTML = staff.map(member => {
+      const displayName =
+        member.email ? member.email.split("@")[0] : "Pickup Staff";
+
+      return `
+        <tr>
+          <td>${escapeHtml(displayName)}</td>
+          <td class="staff-email">${escapeHtml(member.email || "")}</td>
+          <td><span class="badge active">Pickup Staff</span></td>
+          <td>${formatDateTime(member.created_at)}</td>
+        </tr>
+      `;
+    }).join("");
+
+    return staff;
   }
 
   async function loadStudents() {
@@ -1421,6 +1698,7 @@
 
   async function loadDashboard() {
     await loadSchoolName();
+    await loadPickupStaff();
     await loadStudents();
     await loadScans();
   }
@@ -1509,6 +1787,10 @@
   }
 
   window.addEventListener("beforeunload", clearTemporaryLogoPreviewUrl);
+
+  document
+    .getElementById("addPickupStaffForm")
+    .addEventListener("submit", handlePickupStaffInvite);
 
   init();
 </script>
