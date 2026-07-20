@@ -748,7 +748,7 @@
       error
     } = await supabaseClient
       .from("profiles")
-      .select("id, user_id, email, role, school_id, created_at")
+      .select("id, email, role, school_id, created_at")
       .eq("school_id", currentSchoolId)
       .eq("role", "pickup_staff")
       .order("created_at", {
