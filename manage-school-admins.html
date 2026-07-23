@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manage School Administrators | PickUpPulse</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root {
+      --blue: #0ea5e9;
+      --blue-dark: #0369a1;
+      --blue-light: #e0f2fe;
+      --navy: #0f172a;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #dbe3ec;
+      --danger: #dc2626;
+      --danger-dark: #b91c1c;
+      --success-bg: #dcfce7;
+      --success-text: #166534;
+      --error-bg: #fee2e2;
+      --error-text: #991b1b;
+      --info-bg: #e0f2fe;
+      --info-text: #075985;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, Helvetica, sans-serif;
+      background: linear-gradient(135deg, #dbeafe, #f8fafc);
+      color: var(--text);
+    }
+
+    .topbar {
+      background: var(--navy);
+      color: #fff;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.18);
+    }
+
+    .brand {
+      font-size: 1.3rem;
+      font-weight: 800;
+      letter-spacing: 0.2px;
+    }
+
+    .brand span { color: #38bdf8; }
+
+    .top-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .container {
+      width: min(100% - 32px, 960px);
+      margin: 34px auto;
+    }
+
+    .page-heading {
+      margin-bottom: 20px;
+    }
+
+    .page-heading h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.7rem, 4vw, 2.35rem);
+      color: var(--navy);
+    }
+
+    .page-heading p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+      gap: 22px;
+      align-items: start;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.1);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 20px 22px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .card-header h2 {
+      margin: 0;
+      font-size: 1.16rem;
+      color: var(--navy);
+    }
+
+    .card-body { padding: 22px; }
+
+    .admin-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .admin-row {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      background: #fff;
+    }
+
+    .admin-details {
+      min-width: 0;
+    }
+
+    .admin-email {
+      margin: 0 0 5px;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+      color: var(--navy);
+    }
+
+    .admin-meta {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: var(--blue-light);
+      color: var(--blue-dark);
+      font-size: 0.78rem;
+      font-weight: 700;
+      margin-left: 6px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 7px;
+      color: var(--navy);
+      font-weight: 700;
+    }
+
+    input[type="email"] {
+      width: 100%;
+      border: 1px solid #cbd5e1;
+      border-radius: 11px;
+      padding: 12px 13px;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    input[type="email"]:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.16);
+    }
+
+    .help-text {
+      margin: 9px 0 18px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+
+    button, .button-link {
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.08s, opacity 0.15s, background 0.15s;
+    }
+
+    button:active, .button-link:active { transform: translateY(1px); }
+    button:disabled { cursor: not-allowed; opacity: 0.55; }
+
+    .btn-primary {
+      width: 100%;
+      color: #fff;
+      background: var(--blue);
+    }
+
+    .btn-primary:hover:not(:disabled) { background: #0284c7; }
+
+    .btn-secondary {
+      background: #334155;
+      color: #fff;
+    }
+
+    .btn-secondary:hover { background: #1e293b; }
+
+    .btn-danger {
+      flex-shrink: 0;
+      background: var(--danger);
+      color: #fff;
+      padding: 8px 11px;
+    }
+
+    .btn-danger:hover:not(:disabled) { background: var(--danger-dark); }
+
+    .btn-light {
+      color: var(--navy);
+      background: #e2e8f0;
+    }
+
+    .btn-light:hover { background: #cbd5e1; }
+
+    .message {
+      display: none;
+      margin: 0 0 18px;
+      padding: 12px 14px;
+      border-radius: 11px;
+      line-height: 1.45;
+    }
+
+    .message.success { display: block; background: var(--success-bg); color: var(--success-text); }
+    .message.error { display: block; background: var(--error-bg); color: var(--error-text); }
+    .message.info { display: block; background: var(--info-bg); color: var(--info-text); }
+
+    .loading, .empty-state {
+      padding: 20px;
+      text-align: center;
+      color: var(--muted);
+      border: 1px dashed #cbd5e1;
+      border-radius: 12px;
+    }
+
+    .security-note {
+      margin-top: 18px;
+      padding: 13px 14px;
+      border-left: 4px solid var(--blue);
+      background: #f0f9ff;
+      border-radius: 8px;
+      color: #0c4a6e;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 760px) {
+      .grid { grid-template-columns: 1fr; }
+      .topbar { align-items: flex-start; flex-direction: column; }
+      .admin-row { align-items: flex-start; flex-direction: column; }
+      .btn-danger { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">PickUp<span>Pulse</span></div>
+    <div class="top-actions">
+      <a class="button-link btn-light" href="school-admin-dashboard.html">Back to Dashboard</a>
+      <button class="btn-secondary" id="logoutButton" type="button">Log Out</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="page-heading">
+      <h1>Manage School Administrators</h1>
+      <p>Invite trusted staff to manage your school’s PickUpPulse account. Every administrator listed here has school-admin access.</p>
+    </section>
+
+    <div id="pageMessage" class="message" role="alert" aria-live="polite"></div>
+
+    <section class="grid">
+      <article class="card">
+        <div class="card-header">
+          <h2>Current Administrators</h2>
+          <button class="btn-light" id="refreshButton" type="button">Refresh</button>
+        </div>
+        <div class="card-body">
+          <div id="adminList" class="admin-list">
+            <div class="loading">Loading administrators…</div>
+          </div>
+        </div>
+      </article>
+
+      <aside class="card">
+        <div class="card-header">
+          <h2>Invite Administrator</h2>
+        </div>
+        <div class="card-body">
+          <form id="inviteForm">
+            <label for="email">Email address</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autocomplete="email"
+              placeholder="administrator@school.org"
+              required
+            />
+            <p class="help-text">
+              The person will receive an email invitation and will automatically be connected to your school.
+            </p>
+            <button class="btn-primary" id="inviteButton" type="submit">Send Invitation</button>
+          </form>
+
+          <div class="security-note">
+            For safety, you cannot remove yourself or remove the final administrator assigned to a school.
+          </div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    // ============================================================
+    // REQUIRED: Replace these two values with your Supabase values.
+    // Find them in Supabase: Project Settings > API.
+    // Use the public anon/publishable key here, never service_role.
+    // ============================================================
+    const SUPABASE_URL = "https://pthjwhhaupyswopadmsv.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0aGp3aGhhdXB5c3dvcGFkbXN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjgzMTcsImV4cCI6MjA5MTQ0NDMxN30.oSFyNIf3pr9_Nbc8vG4pr9OGU7ufUJgEpW6eQNCwtYs";
+
+    const FUNCTION_NAME = "manage-school-admins";
+    const LOGIN_PAGE = "login.html";
+
+    const supabaseClient = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_ANON_KEY
+    );
+
+    const adminList = document.getElementById("adminList");
+    const inviteForm = document.getElementById("inviteForm");
+    const inviteButton = document.getElementById("inviteButton");
+    const refreshButton = document.getElementById("refreshButton");
+    const logoutButton = document.getElementById("logoutButton");
+    const pageMessage = document.getElementById("pageMessage");
+
+    let currentUserId = null;
+    let administrators = [];
+
+    document.addEventListener("DOMContentLoaded", initializePage);
+    inviteForm.addEventListener("submit", inviteAdministrator);
+    refreshButton.addEventListener("click", loadAdministrators);
+    logoutButton.addEventListener("click", logOut);
+
+    async function initializePage() {
+      clearMessage();
+
+      if (
+        SUPABASE_URL.includes("YOUR_SUPABASE") ||
+        SUPABASE_ANON_KEY.includes("YOUR_SUPABASE")
+      ) {
+        showMessage("Add your Supabase URL and anon/publishable key near the bottom of this file before using this page.", "error");
+        adminList.innerHTML = '<div class="empty-state">Supabase is not configured.</div>';
+        return;
+      }
+
+      const { data, error } = await supabaseClient.auth.getSession();
+      const session = data?.session;
+
+      if (error || !session) {
+        window.location.href = LOGIN_PAGE;
+        return;
+      }
+
+      currentUserId = session.user.id;
+      await loadAdministrators();
+    }
+
+    async function callManageFunction(action, extraBody = {}) {
+      const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+
+      if (sessionError || !accessToken) {
+        window.location.href = LOGIN_PAGE;
+        throw new Error("Your login session has expired.");
+      }
+
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/${FUNCTION_NAME}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${accessToken}`,
+          "apikey": SUPABASE_ANON_KEY
+        },
+        body: JSON.stringify({ action, ...extraBody })
+      });
+
+      let result = {};
+      try {
+        result = await response.json();
+      } catch (_) {
+        // The response may not contain JSON if the function failed before running.
+      }
+
+      if (!response.ok) {
+        throw new Error(result.error || result.message || `Request failed with status ${response.status}.`);
+      }
+
+      return result;
+    }
+
+    async function loadAdministrators() {
+      refreshButton.disabled = true;
+      adminList.innerHTML = '<div class="loading">Loading administrators…</div>';
+
+      try {
+        const result = await callManageFunction("list");
+        administrators = Array.isArray(result.administrators) ? result.administrators : [];
+        renderAdministrators();
+      } catch (error) {
+        adminList.innerHTML = '<div class="empty-state">Administrators could not be loaded.</div>';
+        showMessage(error.message, "error");
+      } finally {
+        refreshButton.disabled = false;
+      }
+    }
+
+    function renderAdministrators() {
+      if (administrators.length === 0) {
+        adminList.innerHTML = '<div class="empty-state">No school administrators were found.</div>';
+        return;
+      }
+
+      adminList.innerHTML = "";
+
+      administrators.forEach((admin) => {
+        const isCurrentUser = admin.user_id === currentUserId;
+        const isLastAdmin = administrators.length <= 1;
+
+        const row = document.createElement("div");
+        row.className = "admin-row";
+
+        const details = document.createElement("div");
+        details.className = "admin-details";
+
+        const email = document.createElement("p");
+        email.className = "admin-email";
+        email.textContent = admin.email || "No email available";
+
+        if (isCurrentUser) {
+          const badge = document.createElement("span");
+          badge.className = "badge";
+          badge.textContent = "You";
+          email.appendChild(badge);
+        }
+
+        const meta = document.createElement("p");
+        meta.className = "admin-meta";
+        meta.textContent = admin.created_at
+          ? `Administrator since ${formatDate(admin.created_at)}`
+          : "School administrator";
+
+        details.appendChild(email);
+        details.appendChild(meta);
+        row.appendChild(details);
+
+        const removeButton = document.createElement("button");
+        removeButton.type = "button";
+        removeButton.className = "btn-danger";
+        removeButton.textContent = isCurrentUser ? "Current User" : "Remove";
+        removeButton.disabled = isCurrentUser || isLastAdmin;
+
+        if (!isCurrentUser && !isLastAdmin) {
+          removeButton.addEventListener("click", () => removeAdministrator(admin));
+        }
+
+        row.appendChild(removeButton);
+        adminList.appendChild(row);
+      });
+    }
+
+    async function inviteAdministrator(event) {
+      event.preventDefault();
+      clearMessage();
+
+      const emailInput = document.getElementById("email");
+      const email = emailInput.value.trim().toLowerCase();
+
+      if (!email) {
+        showMessage("Enter an email address.", "error");
+        return;
+      }
+
+      inviteButton.disabled = true;
+      inviteButton.textContent = "Sending…";
+
+      try {
+        const result = await callManageFunction("invite", { email });
+        showMessage(result.message || `An invitation was sent to ${email}.`, "success");
+        inviteForm.reset();
+        await loadAdministrators();
+      } catch (error) {
+        showMessage(error.message, "error");
+      } finally {
+        inviteButton.disabled = false;
+        inviteButton.textContent = "Send Invitation";
+      }
+    }
+
+    async function removeAdministrator(admin) {
+      const confirmed = window.confirm(
+        `Remove ${admin.email} as a school administrator?\n\nThis will revoke access to PickUpPulse for this account.`
+      );
+
+      if (!confirmed) return;
+
+      clearMessage();
+
+      try {
+        const result = await callManageFunction("remove", {
+          target_user_id: admin.user_id
+        });
+
+        showMessage(result.message || `${admin.email} was removed.`, "success");
+        await loadAdministrators();
+      } catch (error) {
+        showMessage(error.message, "error");
+      }
+    }
+
+    async function logOut() {
+      logoutButton.disabled = true;
+      await supabaseClient.auth.signOut();
+      window.location.href = LOGIN_PAGE;
+    }
+
+    function formatDate(value) {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return "an unknown date";
+
+      return new Intl.DateTimeFormat("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric"
+      }).format(date);
+    }
+
+    function showMessage(text, type = "info") {
+      pageMessage.textContent = text;
+      pageMessage.className = `message ${type}`;
+      pageMessage.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    function clearMessage() {
+      pageMessage.textContent = "";
+      pageMessage.className = "message";
+    }
+  </script>
+</body>
+</html>
