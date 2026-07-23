@@ -446,7 +446,7 @@
       adminList.innerHTML = "";
 
       administrators.forEach((admin) => {
-        const isCurrentUser = admin.user_id === currentUserId;
+        const isCurrentUser = admin.id === currentUserId;
         const isLastAdmin = administrators.length <= 1;
 
         const row = document.createElement("div");
@@ -530,7 +530,7 @@
 
       try {
         const result = await callManageFunction("remove", {
-          target_user_id: admin.user_id
+          target_user_id: admin.id
         });
 
         showMessage(result.message || `${admin.email} was removed.`, "success");
