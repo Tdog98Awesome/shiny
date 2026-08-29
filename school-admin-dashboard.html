@@ -40,6 +40,9 @@
     .warning-btn { background: var(--orange); color: white; }
     .ghost-btn { background: #e2e8f0; color: #0f172a; }
     .danger-btn { background: #dc2626; color: white; }
+    .danger-zone { border: 2px solid #fecaca; background: #fff7f7; }
+    .danger-zone h2 { color: #991b1b; }
+    .danger-warning { color: #7f1d1d; font-weight: bold; }
     table { width: 100%; border-collapse: collapse; margin-top: 14px; }
     th, td { padding: 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
     th { background: #f8fafc; color: #334155; }
@@ -400,6 +403,14 @@
         <tbody id="scanTableBody"></tbody>
       </table>
     </div>
+  </div>
+
+  <div class="card danger-zone" id="dangerZoneCard">
+    <h2>Danger Zone</h2>
+    <p class="danger-warning">Permanently delete this school's student data from PickUpPulse.</p>
+    <p class="small">This action is intended for a school that is ending its use of PickUpPulse. It deletes the school's student records and associated pickup scan history. It does not delete the school account, school administrators, pickup-staff accounts, or billing/account information.</p>
+    <button class="danger-btn" onclick="deleteAllStudentData()">Delete All Student Data</button>
+    <p id="deleteStudentDataStatus" class="small">This action cannot be undone.</p>
   </div>
 
 </div>
@@ -1687,6 +1698,75 @@
     tbody.innerHTML = "";
     scanStatus.className = "success";
     scanStatus.innerText = "Scan history cleared for this school.";
+  }
+
+
+  async function deleteAllStudentData() {
+    if (!currentUserSchoolId) {
+      alert("No school_id found for this admin account. Nothing was deleted.");
+      return;
+    }
+
+    const phrase = "DELETE STUDENT DATA";
+    const typed = prompt(
+      "PERMANENT DELETION\n\n" +
+      "This will permanently delete all student records and associated pickup scan history for this school. " +
+      "The school account and staff accounts will remain.\n\n" +
+      `Type ${phrase} exactly to continue:`
+    );
+
+    if (typed === null) return;
+    if (typed.trim() !== phrase) {
+      alert("The confirmation phrase did not match. Nothing was deleted.");
+      return;
+    }
+
+    const finalConfirmed = confirm(
+      "Final confirmation: permanently delete this school's student data?\n\nThis cannot be undone."
+    );
+    if (!finalConfirmed) return;
+
+    const status = document.getElementById("deleteStudentDataStatus");
+    status.className = "small";
+    status.innerText = "Deleting student data...";
+
+    try {
+      // Server-side Edge Function must authenticate the caller, verify school_admin/super_admin,
+      // derive school_id from the caller's profile, and delete only that school's student data.
+      const { data, error } = await supabaseClient.functions.invoke("delete-school-student-data", {
+        body: { confirmation: phrase }
+      });
+
+      if (error) {
+        let message = error.message || "The deletion request failed.";
+        try {
+          if (error.context && typeof error.context.json === "function") {
+            const body = await error.context.json();
+            if (body?.error) message = body.error;
+          }
+        } catch (_) {}
+        throw new Error(message);
+      }
+
+      if (!data?.success) {
+        throw new Error(data?.error || "The server did not confirm that deletion succeeded.");
+      }
+
+      allStudents = [];
+      latestScans = [];
+      clearCsvPreview(false);
+      await loadStudents();
+      await loadScans();
+
+      status.className = "success";
+      status.innerText = "Student data was permanently deleted for this school.";
+      alert("Student data was permanently deleted for this school.");
+    } catch (error) {
+      console.error("Student-data deletion error:", error);
+      status.className = "error";
+      status.innerText = "Could not delete student data: " + (error.message || "Unknown error");
+      alert(status.innerText);
+    }
   }
 
   async function markPickedUp(scanId, checked) {
